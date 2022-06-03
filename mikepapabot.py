@@ -46,7 +46,7 @@ def choice(message, ignore_size=False):
         user_input = message.text.split(' ', 1)
         if len(user_input) <= 1:
             markup = telebot.types.ForceReply(selective=False)
-            get_reply = bot.send_message(message.chat.id, "Please, enter a choice:", reply_markup=markup)
+            get_reply = bot.send_message(message.chat.id, "Please, enter a choice:", reply_markup=markup, reply_to_message_id=message.message_id)
             bot.register_next_step_handler(get_reply, choice, True)
             return
         else: user_input = user_input[1]
@@ -102,7 +102,7 @@ def extra(message, ignore_size=False):
         user_input = message.text.split(' ', 1)
         if len(user_input) <= 1:
             markup = telebot.types.ForceReply(selective=False)
-            get_reply = bot.send_message(message.chat.id, "Please, enter a choice:", reply_markup=markup)
+            get_reply = bot.send_message(message.chat.id, "Please, enter a choice:", reply_markup=markup, reply_to_message_id=message.message_id)
             bot.register_next_step_handler(get_reply, extra, True)
             return
         else: user_input = user_input[1]
