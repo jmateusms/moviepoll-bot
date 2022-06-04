@@ -1,2 +1,2 @@
-web: python mikepapabot.py
-worker: python mikepapabot.py 
+web: python moviepoll-bot.py
+worker: python moviepoll-bot.py 

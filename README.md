@@ -1,10 +1,8 @@
-# mikepapa-bot
+# moviepoll-bot
 
-Mike Papa is a bot for choosing movies to watch with friends. It allows each participant to suggest a movie. The bot can create a poll with all answers or choose one at random.
+This is a telegram bot for choosing movies to watch with friends. It allows each participant to suggest a movie. The bot can create a poll with all answers or choose one at random.
 
-Why Mike Papa? When I started building this bot, I chose that as a placeholder name and never really changed it since, I guess. Mike Papa is the [NATO phonetic alphabet](https://en.wikipedia.org/wiki/NATO_phonetic_alphabet) words for MP (movie poll). My group of movie friends think the name is bad and that's enough reason for me to keep it. :)
-
-This is currently a work in progress, with some functions still being implemented. An instance of this bot is currently running. You can use it by adding the Telegram bot [@MikePapa_bot](http://t.me/MikePapa_bot) to a group in Telegram. This bot has privacy mode enabled, which means that the bot will only receive messages that start with the '/' symbol or mention the bot by username (see more details in [Telegram's bots introduction page](https://core.telegram.org/bots#privacy-mode)). In any case, use it at your own risk.
+This is currently a work in progress, with some functions still being implemented. An instance of this bot is currently running. You can use it by adding the Telegram bot [@MoviePoll_bot](http://t.me/MoviePoll_bot) to a group in Telegram. This bot has privacy mode enabled, which means that the bot will only receive messages that start with the '/' symbol or mention the bot by username (see more details in [Telegram's bots introduction page](https://core.telegram.org/bots#privacy-mode)). In any case, use it at your own risk.
 
 If you prefer, just run your own instance of the bot, by following the instructions below.
 
@@ -30,7 +28,7 @@ pip install -r requirements.txt
 ### Running the bot
 
 ```bash
-python mikepapa_bot.py
+python moviepoll-bot.py
 ```
 
 ## Usage
@@ -55,3 +53,9 @@ The `/choices` command shows what each user has suggested. The `/poll` command  
 /clear - clear your choice
 /clearextra - clear the extra choice
 ```
+
+## To do
+
+- Fix `/choose` command when no text is given in group chats (ForceReply doesn't choose correct user).
+- Add inline functionality to search for movies in IMDb.
+- Add persistent storage for bot memory when deployed in platforms such as Heroku.

@@ -21,7 +21,8 @@ pm = memo()
 def start(message):
     bot.send_message(message.chat.id,
     '''
-Hi, I'm Mike Papa! These are the available commands:
+Hi, I'm a movie poll bot! I can help you choose a movie with friends.
+These are the available commands:
 /start, /help - show this message
 /hello - say hello
 /choose - suggest a movie for the poll (must be a valid IMDb url or tt tag)
@@ -36,7 +37,7 @@ Hi, I'm Mike Papa! These are the available commands:
 
 @bot.message_handler(commands=['hello'])
 def hello(message):
-    bot.reply_to(message, 'Hello, I am Mike Papa!')
+    bot.reply_to(message, 'Hello, I\'m a movie poll bot! I can help you choose a movie with friends.')
 
 @bot.message_handler(commands=['choose'])
 def choice(message, ignore_size=False):
