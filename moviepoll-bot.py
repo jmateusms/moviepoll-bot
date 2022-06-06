@@ -197,10 +197,13 @@ def poll_complete(pollAnswer):
     chat_id = pm.poll_chats[pollAnswer.poll_id]
     if pm.last_poll[chat_id] is None:
         return
-    pm.users_voted[chat_id].append(pollAnswer.user.id)
-    pm.poll_counts[chat_id][pollAnswer.option_ids[0]] += 1
-    bot.send_message(chat_id, f'User {pollAnswer.user.first_name} has voted.')
-    if set(pm.users_voted[chat_id]) == set(pm.user_choices[chat_id].keys()) - set(['dummy', '0']):
+    if pollAnswer.user.id not in pm.users_voted[chat_id]:
+        pm.poll_counts[chat_id][pollAnswer.option_ids[0]] += 1
+        pm.users_voted[chat_id].append(pollAnswer.user.id)
+        bot.send_message(chat_id, f'User {pollAnswer.user.first_name} has voted.')
+    else:
+        bot.send_message(chat_id, f'User {pollAnswer.user.first_name} has voted (again).')
+    if (set(pm.user_choices[chat_id].keys()) - set(['dummy', '0'])).issubset(set(pm.users_voted[chat_id])):
         bot.stop_poll(chat_id, pm.last_poll[chat_id].id)
         ids = pm.poll_counts[chat_id]
         winner_count = max(ids)

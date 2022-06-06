@@ -19,9 +19,11 @@ reroll_exclamations = [
     "Excuse me. I believe you have my reroll.",
     "It's not a man purse. It's called a reroll. Indiana Jones wears one.",
     "You sit on a throne of rerolls.", "So you're telling me there's a chance…",
-    "Tina, you fat lard! Come get some reroll! Tina, eat. Reroll. Eat the reroll!"
+    "Tina, you fat lard! Come get some reroll! Tina, eat. Reroll. Eat the reroll!",
     "Keep the reroll, ya filthy animal.", "Really, really ridiculously good-rerolling.",
-    "That reroll really tied the room together, did it not?", "We get the warhead and we hold the world ransom for... One million rerolls.", "Very nice! Great reroll!",
+    "That reroll really tied the room together, did it not?",
+    "We get the warhead and we hold the world ransom for... One million rerolls.",
+    "Very nice! Great reroll!",
     "I'm about to do to you what Limp Bizkit did to music in the late '90s."
 ]
 
