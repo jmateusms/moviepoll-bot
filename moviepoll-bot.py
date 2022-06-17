@@ -34,6 +34,7 @@ These are the available commands:
 /random - choose random movie among all choices
 /clear - clear your choice
 /clearextra - clear the extra choice
+/veto - veto one of the current choices
 ''')
 
 @bot.message_handler(commands=['hello'])
