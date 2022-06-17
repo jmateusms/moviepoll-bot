@@ -2,6 +2,7 @@
 import os
 from dotenv import load_dotenv
 import telebot
+from telebot import types
 import requests
 import random
 from utils import *
@@ -154,6 +155,26 @@ def clear_choices(message):
     else:
         bot.send_message(message.chat.id, 'You do not possess that kind of power.')
 
+@bot.message_handler(commands=['veto'])
+def veto(message):
+    # forcereply with current choices
+    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
+    markup.add(*[value['title'] for _, value in pm.user_choices[message.chat.id].items() if value['title'] is not None])
+    get_reply = bot.send_message(message.chat.id, "Please, enter a choice to veto:", reply_markup=markup)
+    bot.register_next_step_handler(get_reply, veto_choice)
+
+@bot.message_handler(commands=[])
+def veto_choice(message):
+    if message.chat.id in pm.user_choices:
+        for key, value in pm.user_choices[message.chat.id].items():
+            if value['title'] == message.text:
+                del pm.user_choices[message.chat.id][key]
+                pm.sync_mem()
+                bot.send_message(message.chat.id, f'Vetoed choice {message.text}.')
+                return
+        bot.send_message(message.chat.id, 'Choice not found.')
+    bot.send_message(message.chat.id, 'No choices have been made yet.')
+
 @bot.message_handler(commands=['reset'])
 def clear_memory(message):
     if message.from_user.id in [OWNER_ID]:
@@ -168,7 +189,8 @@ def poll(message):
     if len(pm.user_choices[message.chat.id]) > 1:
         bot.send_message(message.chat.id, 'Creating poll... Here are the choices:')
         for key, value in pm.user_choices[message.chat.id].items():
-            bot.send_message(message.chat.id, f'{value["title"]}: {value["url"]}'.format(key=key, value=value))
+            if value['title'] is not None:
+                bot.send_message(message.chat.id, f'{value["title"]}: {value["url"]}'.format(key=key, value=value))
         pm.last_poll[message.chat.id] = bot.send_poll(message.chat.id, 'Choose', [value["title"] for key, value in pm.user_choices[message.chat.id].items() if value["title"] is not None], is_anonymous=False)
         pm.users_voted[message.chat.id] = []
         pm.poll_counts[message.chat.id] = len(pm.user_choices[message.chat.id]) * [0]
