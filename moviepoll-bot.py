@@ -159,11 +159,14 @@ def clear_choices(message):
 @bot.message_handler(commands=['veto'])
 def veto(message):
     if message.chat.id in pm.user_choices:
-        markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
-        markup.add(*[value['title'] for _, value in pm.user_choices[message.chat.id].items() if value['title'] is not None])
-        markup.add('Cancel')
-        get_reply = bot.send_message(message.chat.id, "Please, enter a choice to veto:", reply_markup=markup)
-        bot.register_next_step_handler(get_reply, veto_choice)
+        if len(pm.user_choices[message.chat.id]) > 0:
+            markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
+            markup.add(*[value['title'] for _, value in pm.user_choices[message.chat.id].items() if value['title'] is not None])
+            markup.add('Cancel')
+            get_reply = bot.send_message(message.chat.id, "Please, enter a choice to veto:", reply_markup=markup)
+            bot.register_next_step_handler(get_reply, veto_choice)
+        else:
+            bot.send_message(message.chat.id, "No choices to veto.")
     else:
         bot.send_message(message.chat.id, 'No choices have been made yet.')
 
