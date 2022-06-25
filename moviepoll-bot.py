@@ -64,7 +64,8 @@ def choice(message, ignore_size=False):
             'title': title
         }
         pm.sync_mem()
-        bot.send_message(message.chat.id, f'Saved choice {title} for user {pm.user_choices[message.chat.id][message.from_user.id]["username"]}')
+        markup = types.ReplyKeyboardRemove(selective=False)
+        bot.send_message(message.chat.id, f'Saved choice {title} for user {pm.user_choices[message.chat.id][message.from_user.id]["username"]}', reply_markup=markup)
     else:
         markup = telebot.types.ForceReply(selective=False)
         get_reply = bot.send_message(message.chat.id, "Please, enter a valid IMDb url or tt tag:", reply_markup=markup)
@@ -120,7 +121,8 @@ def extra(message, ignore_size=False):
             'title': title
         }
         pm.sync_mem()
-        bot.send_message(message.chat.id, f'Saved extra choice {title}.')
+        markup = types.ReplyKeyboardRemove(selective=False)
+        bot.send_message(message.chat.id, f'Saved extra choice {title}.', reply_markup=markup)
     else:
         markup = telebot.types.ForceReply(selective=False)
         get_reply = bot.send_message(message.chat.id, "Please, enter a valid IMDb url or tt tag:", reply_markup=markup)
@@ -171,7 +173,8 @@ def veto_choice(message):
             if value['title'] == message.text:
                 del pm.user_choices[message.chat.id][key]
                 pm.sync_mem()
-                bot.send_message(message.chat.id, f'Vetoed choice {message.text}.')
+                markup = types.ReplyKeyboardRemove(selective=False)
+                bot.send_message(message.chat.id, f'Vetoed choice {message.text}.', reply_markup=markup)
                 return
         bot.send_message(message.chat.id, 'Choice not found.')
     bot.send_message(message.chat.id, 'No choices have been made yet.')
