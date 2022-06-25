@@ -67,7 +67,7 @@ def choice(message, ignore_size=False):
         markup = types.ReplyKeyboardRemove(selective=False)
         bot.send_message(message.chat.id, f'Saved choice {title} for user {pm.user_choices[message.chat.id][message.from_user.id]["username"]}', reply_markup=markup)
     elif ignore_size:
-        markup = telebot.types.ForceReply(selective=False)
+        markup = telebot.types.ReplyKeyboardRemove(selective=False)
         bot.send_message(message.chat.id, "No valid IMDb url or tt tag detected.", reply_markup=markup)
 
 @bot.message_handler(commands=['choosedummy'])
