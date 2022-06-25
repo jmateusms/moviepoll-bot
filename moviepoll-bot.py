@@ -67,9 +67,7 @@ def choice(message, ignore_size=False):
         markup = types.ReplyKeyboardRemove(selective=False)
         bot.send_message(message.chat.id, f'Saved choice {title} for user {pm.user_choices[message.chat.id][message.from_user.id]["username"]}', reply_markup=markup)
     else:
-        markup = telebot.types.ForceReply(selective=False)
-        get_reply = bot.send_message(message.chat.id, "Please, enter a valid IMDb url or tt tag:", reply_markup=markup)
-        bot.register_next_step_handler(get_reply, choice, True)
+        bot.send_message(message.chat.id, "No valid IMDb url or tt tag detected.")
 
 @bot.message_handler(commands=['choosedummy'])
 def dummychoice(message):
@@ -124,9 +122,7 @@ def extra(message, ignore_size=False):
         markup = types.ReplyKeyboardRemove(selective=False)
         bot.send_message(message.chat.id, f'Saved extra choice {title}.', reply_markup=markup)
     else:
-        markup = telebot.types.ForceReply(selective=False)
-        get_reply = bot.send_message(message.chat.id, "Please, enter a valid IMDb url or tt tag:", reply_markup=markup)
-        bot.register_next_step_handler(get_reply, extra, True)
+        bot.send_message(message.chat.id, "No valid IMDb url or tt tag detected.")
 
 @bot.message_handler(commands=['choices'])
 def display_choices(message):
@@ -163,6 +159,7 @@ def veto(message):
     # forcereply with current choices
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
     markup.add(*[value['title'] for _, value in pm.user_choices[message.chat.id].items() if value['title'] is not None])
+    markup.add('Cancel')
     get_reply = bot.send_message(message.chat.id, "Please, enter a choice to veto:", reply_markup=markup)
     bot.register_next_step_handler(get_reply, veto_choice)
 
@@ -177,7 +174,10 @@ def veto_choice(message):
                 bot.send_message(message.chat.id, f'Vetoed choice {message.text}.', reply_markup=markup)
                 return
         bot.send_message(message.chat.id, 'Choice not found.')
-    bot.send_message(message.chat.id, 'No choices have been made yet.')
+    elif message.text == 'Cancel':
+        bot.send_message(message.chat.id, 'No movie vetoed.')
+    else:
+        bot.send_message(message.chat.id, 'No choices have been made yet.')
 
 @bot.message_handler(commands=['reset'])
 def clear_memory(message):
