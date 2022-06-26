@@ -135,14 +135,14 @@ def display_choices(message):
 @bot.message_handler(commands=['clear'])
 def clear_choice(message):
     if message.from_user.id in pm.user_choices[message.chat.id]:
-        del pm.user_choices[message.chat.id][message.from_user.id]
+        del(pm.user_choices[message.chat.id][message.from_user.id])
         pm.sync_mem()
         bot.send_message(message.chat.id, f'Cleared choice for user {pm.user_choices[message.chat.id][message.from_user.id]["username"]}')
 
 @bot.message_handler(commands=['clearextra'])
 def clear_extra(message):
     if '0' in pm.user_choices[message.chat.id]:
-        del pm.user_choices[message.chat.id]['0']
+        del(pm.user_choices[message.chat.id]['0'])
         pm.sync_mem()
         bot.send_message(message.chat.id, f'Cleared extra choice.')
 
@@ -179,7 +179,7 @@ def veto_choice(message):
             return
         for key, value in pm.user_choices[message.chat.id].items():
             if value['title'] == message.text:
-                del pm.user_choices[message.chat.id][key]
+                del(pm.user_choices[message.chat.id][key])
                 pm.sync_mem()
                 markup = types.ReplyKeyboardRemove(selective=False)
                 bot.send_message(message.chat.id, f'Vetoed choice {message.text}.', reply_markup=markup)
