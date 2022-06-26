@@ -135,16 +135,16 @@ def display_choices(message):
 @bot.message_handler(commands=['clear'])
 def clear_choice(message):
     if message.from_user.id in pm.user_choices[message.chat.id]:
+        bot.send_message(message.chat.id, f'Cleared choice for user {pm.user_choices[message.chat.id][message.from_user.id]["username"]}')
         del(pm.user_choices[message.chat.id][message.from_user.id])
         pm.sync_mem()
-        bot.send_message(message.chat.id, f'Cleared choice for user {pm.user_choices[message.chat.id][message.from_user.id]["username"]}')
 
 @bot.message_handler(commands=['clearextra'])
 def clear_extra(message):
     if '0' in pm.user_choices[message.chat.id]:
+        bot.send_message(message.chat.id, f'Cleared extra choice.')
         del(pm.user_choices[message.chat.id]['0'])
         pm.sync_mem()
-        bot.send_message(message.chat.id, f'Cleared extra choice.')
 
 @bot.message_handler(commands=['clearall'])
 def clear_choices(message):
@@ -179,10 +179,10 @@ def veto_choice(message):
             return
         for key, value in pm.user_choices[message.chat.id].items():
             if value['title'] == message.text:
+                bot.send_message(message.chat.id, f'Vetoed choice {message.text}.', reply_markup=markup)
                 del(pm.user_choices[message.chat.id][key])
                 pm.sync_mem()
                 markup = types.ReplyKeyboardRemove(selective=False)
-                bot.send_message(message.chat.id, f'Vetoed choice {message.text}.', reply_markup=markup)
                 return
         markup = types.ReplyKeyboardRemove(selective=False)
         bot.send_message(message.chat.id, 'Choice not found.', reply_markup=markup)
