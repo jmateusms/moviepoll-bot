@@ -38,7 +38,6 @@ def start(message):
 Hi, I'm a movie poll bot! I can help you choose a movie with friends.
 These are the available commands:
 /start, /help - show this message
-/hello - say hello
 /choose - suggest a movie for the poll (must be a valid IMDb url or tt tag)
 /participate - participate in the poll without suggesting a movie
 /extra - add an extra movie to the poll (not assigned to a user)
@@ -49,10 +48,6 @@ These are the available commands:
 /clearextra - clear the extra choice
 /veto - veto one of the current choices
 ''')
-
-@bot.message_handler(commands=['hello'])
-def hello(message):
-    bot.reply_to(message, 'Hello, I\'m a movie poll bot! I can help you choose a movie with friends.')
 
 @bot.message_handler(commands=['choose'])
 def choice(message, ignore_size=False):
@@ -141,9 +136,17 @@ def extra(message, ignore_size=False):
 
 @bot.message_handler(commands=['choices'])
 def display_choices(message):
-    bot.send_message(message.chat.id, 'Current choices:')
-    for key, value in pm.user_choices[message.chat.id].items():
-        bot.send_message(message.chat.id, f'{value["username"]}: {value["title"]}'.format(key=key, value=value))
+    if message.chat.id in pm.user_choices:
+        if len(pm.user_choices[message.chat.id]) == 0:
+            bot.send_message(message.chat.id, "No current choices found.")
+        else:
+            choices = []
+            for user_id in pm.user_choices[message.chat.id]:
+                if pm.user_choices[message.chat.id][user_id]['title'] is not None:
+                    choices.append(f'{pm.user_choices[message.chat.id][user_id]["username"]}: {pm.user_choices[message.chat.id][user_id]["title"]}')
+            bot.send_message(message.chat.id, '\n'.join(choices))
+    else:
+        bot.send_message(message.chat.id, "No choices have been made yet.")
 
 @bot.message_handler(commands=['clear'])
 def clear_choice(message):
