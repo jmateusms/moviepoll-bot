@@ -15,7 +15,21 @@ OWNER_ID = int(os.getenv('OWNER_ID'))
 
 # create bot
 bot = telebot.TeleBot(TOKEN)
+
 server = Flask(__name__)
+
+@server.route('/' + TOKEN, methods=['POST'])
+def getMessage():
+    json_string = request.get_data().decode('utf-8')
+    update = telebot.types.Update.de_json(json_string)
+    bot.process_new_updates([update])
+    return "!", 200
+
+@server.route("/")
+def webhook():
+    bot.remove_webhook()
+    bot.set_webhook(url='https://moviepoll-bot.herokuapp.com/' + TOKEN)
+    return "!", 200
 
 # initialize bot memory
 pm = memo()
@@ -290,20 +304,6 @@ def random_choice(message):
         pm.sync_mem()
     else:
         bot.send_message(message.chat.id, 'You need to have at least two options to choose from.')
-
-@server.route('/' + TOKEN, methods=['POST'])
-def getMessage():
-    json_string = request.get_data().decode('utf-8')
-    update = telebot.types.Update.de_json(json_string)
-    bot.process_new_updates([update])
-    return "!", 200
-
-@server.route("/")
-def webhook():
-    bot.remove_webhook()
-    bot.set_webhook(url='https://https://moviepoll-bot.herokuapp.com/' + TOKEN)
-    return "!", 200
-
 
 if __name__ == "__main__":
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
