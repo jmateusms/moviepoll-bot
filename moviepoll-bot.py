@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 import telebot
 from telebot import types
+from flask import Flask, request
 import requests
 import random
 from utils import *
@@ -14,6 +15,7 @@ OWNER_ID = int(os.getenv('OWNER_ID'))
 
 # create bot
 bot = telebot.TeleBot(TOKEN)
+server = Flask(__name__)
 
 # initialize bot memory
 pm = memo()
@@ -289,13 +291,19 @@ def random_choice(message):
     else:
         bot.send_message(message.chat.id, 'You need to have at least two options to choose from.')
 
-if __name__ == '__main__':
-    while True:
-        try:
-            bot.polling(non_stop=True)
-            # yes, this is ugly, but it crashes sometimes otherwise due to
-            # random timeouts
-        except telebot.apihelper.ApiTelegramException:
-            pass
-        except requests.exceptions.ConnectionError:
-            pass
+@server.route('/' + TOKEN, methods=['POST'])
+def getMessage():
+    json_string = request.get_data().decode('utf-8')
+    update = telebot.types.Update.de_json(json_string)
+    bot.process_new_updates([update])
+    return "!", 200
+
+@server.route("/")
+def webhook():
+    bot.remove_webhook()
+    bot.set_webhook(url='https://https://moviepoll-bot.herokuapp.com/' + TOKEN)
+    return "!", 200
+
+
+if __name__ == "__main__":
+    server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
