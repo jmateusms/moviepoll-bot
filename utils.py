@@ -91,29 +91,24 @@ class memo:
     
     def create_mem(self):
         '''
-        Create memory. Objects are pickle files.
+        Create memory items.
         '''
-        self.user_choices = defaultdict(dict)
-        self.users_voted = defaultdict(dict)
-        self.last_poll = defaultdict(dict)
-        self.poll_chats = {}
-        self.poll_counts = defaultdict(dict)
+        self.user_choices = pd.DataFrame(
+            columns=['chat_id', 'user_id', 'username', 'tt', 'url', 'title'])
+        self.users_voted = pd.DataFrame(columns=['chat_id', 'user_list'])
+        self.last_poll = pd.DataFrame(columns=['chat_id', 'poll_obj'])
+        self.poll_chats = pd.DataFrame(columns=['poll_id', 'chat_id'])
+        self.poll_counts = pd.DataFrame(columns=['chat_id', 'votes'])
 
         if self.engine == None:
             if os.path.isdir('mem') == False:
                 os.mkdir('mem')
-        else:
-            self.df_user_choices = pd.DataFrame.from_dict(self.user_choices, orient='index')
-            self.df_users_voted = pd.DataFrame.from_dict(self.users_voted, orient='index')
-            self.df_last_poll = pd.DataFrame.from_dict(self.last_poll, orient='index')
-            self.df_poll_chats = pd.DataFrame.from_dict(self.poll_chats, orient='index')
-            self.df_poll_counts = pd.DataFrame.from_dict(self.poll_counts, orient='index')
         
         self.sync_mem()
 
     def load_mem(self):
         '''
-        Load memory from mem folder. Objects are pickle files.
+        Load memory from mem folder or database.
         '''
         if self.engine == None:
             if os.path.exists('mem/user_choices.pkl') and \
@@ -134,39 +129,19 @@ class memo:
             else:
                 self.create_mem()
         else:
-            self.df_user_choices = pd.read_sql('user_choices', self.engine)
-            self.df_users_voted = pd.read_sql('users_voted', self.engine)
-            self.df_last_poll = pd.read_sql('last_poll', self.engine)
-            self.df_poll_chats = pd.read_sql('poll_chats', self.engine)
-            self.df_poll_counts = pd.read_sql('poll_counts', self.engine)
-
-            raw_user_choices = self.df_user_choices.to_dict('index')
-            raw_users_voted = self.df_users_voted.to_dict('index')
-            raw_last_poll = self.df_last_poll.to_dict('index')
-            raw_poll_chats = self.df_poll_chats.to_dict('index')
-            raw_poll_counts = self.df_poll_counts.to_dict('index')
-
-            self.user_choices = defaultdict(dict)
-            self.users_voted = defaultdict(dict)
-            self.last_poll = defaultdict(dict)
-            self.poll_chats = {}
-            self.poll_counts = defaultdict(dict)
-
-            for key, value in raw_user_choices.items():
-                for k, v in value.items():
-                    self.user_choices[value['index']][v['index']] = {
-                        'username': v['username'],
-                        'tt': v['tt'],
-                        'url': v['url'],
-                        'title': v['title']
-                    }
-            
-            for key, value in raw_users_voted.items():
-                ...
+            try:
+                self.df_user_choices = pd.read_sql('user_choices', self.engine)
+                self.df_users_voted = pd.read_sql('users_voted', self.engine)
+                self.df_last_poll = pd.read_sql('last_poll', self.engine)
+                self.df_poll_chats = pd.read_sql('poll_chats', self.engine)
+                self.df_poll_counts = pd.read_sql('poll_counts', self.engine)
+            except:
+                print('Error loading memory from database. Creating new memory.')
+                self.create_mem()
     
     def sync_mem(self):
         '''
-        Sync memory with mem folder. Objects are pickle files.
+        Sync memory with mem folder or database.
         '''
         if self.engine == None:
             with open('mem/user_choices.pkl', 'wb') as f:
@@ -180,12 +155,6 @@ class memo:
             with open('mem/poll_counts.pkl', 'wb') as f:
                 pickle.dump(self.poll_counts, f)
         else:
-            self.df_user_choices = pd.DataFrame.from_dict(self.user_choices, orient='index')
-            self.df_users_voted = pd.DataFrame.from_dict(self.users_voted, orient='index')
-            self.df_last_poll = pd.DataFrame.from_dict(self.last_poll, orient='index')
-            self.df_poll_chats = pd.DataFrame.from_dict(self.poll_chats, orient='index')
-            self.df_poll_counts = pd.DataFrame.from_dict(self.poll_counts, orient='index')
-            
             self.df_user_choices.to_sql('user_choices', self.engine, if_exists='replace', index=True)
             self.df_users_voted.to_sql('users_voted', self.engine, if_exists='replace', index=True)
             self.df_last_poll.to_sql('last_poll', self.engine, if_exists='replace', index=True)
