@@ -3,9 +3,9 @@ import re
 import bs4
 import requests
 import pickle
+import psycopg2
+from urllib.parse import urlparse
 from collections import defaultdict
-import sqlalchemy
-import pandas as pd
 
 # list of exclamations
 exclamations = [
@@ -80,83 +80,159 @@ def imdb_url(tt):
     else:
         return None
 
+def get_unique_id(chat_id, user_id):
+    '''
+    Get unique id from chat_id and user_id
+    '''
+    return f"{chat_id}_{user_id}"
+
+class sql_mem:
+    '''
+    Bot "memory". Synced to SQL database.
+    '''
+
+    def __init__(self, DATABASE_URL):
+        self.DATABASE_URL = DATABASE_URL
+        self.get_database_connection()
+        self.initialize_database()
+
+    def get_database_connection(self):
+        '''
+        Get database connection.
+        '''
+        result = urlparse(self.DATABASE_URL)
+        username = result.username
+        password = result.password
+        database = result.path[1:]
+        hostname = result.hostname
+        port = result.port
+
+        username, password, database, hostname, port = get_database_credentials(DATABASE_URL)
+        
+        self.connection = psycopg2.connect(
+            database = database,
+            user = username,
+            password = password,
+            host = hostname,
+            port = port
+        )
+        self.cursor = self.connection.cursor()
+
+    def initialize_database(self):
+        '''
+        Create tables for the bot in the database.
+        '''
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS user_choices '\
+                        '(unique_id TEXT PRIMARY KEY, user_id INT, chat_id INT, username TEXT, '\
+                        'tt TEXT, url TEXT, title TEXT)')
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS users_voted '\
+                    '(chat_id INT PRIMARY KEY, user_id INT)')
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS last_poll '\
+                    '(chat_id INT PRIMARY KEY, poll_id INT)')
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS poll_counts '\
+                    '(chat_id INT PRIMARY KEY, poll_id INT, count INT)')
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS results '\
+                    '(unique_tt TEXT PRIMARY KEY, chat_id INT, '\
+                        'tt TEXT, url TEXT, title TEXT, type TEXT, date DATE)')
+        self.connection.commit()
+    
+    def add_choice(self, unique_id, user_id, chat_id, username, tt, url, title):
+        '''
+        Add choice to memory.
+        '''
+        self.cursor.execute(
+                f'SELECT * FROM user_choices WHERE unique_id = "{unique_id}"')
+        if self.cursor.rowcount > 0:
+            self.cursor.execute(
+                f'UPDATE user_choices'\
+                f'SET user_id = "{user_id}", chat_id = "{chat_id}", username = "{username}",'\
+                    f'choice = "{tt}", url = "{url}", title = "{title}"'\
+                f'WHERE unique_id = "{unique_id}"')
+        else:
+            self.cursor.execute(
+                f'INSERT INTO user_choices'\
+                f'(unique_id, user_id, chat_id, username, tt, url, title)'\
+                f'VALUES ("{unique_id}", "{user_id}", "{chat_id}", "{username}", '\
+                    f'"{tt}", "{url}", "{title}")')
+        self.connection.commit()
+    
+    def delete_choice(self, unique_id):
+        '''
+        Delete choice from memory. Returns True if successful, False otherwise.
+        '''
+        self.cursor.execute(
+                f'DELETE FROM user_choices WHERE unique_id = "{unique_id}"')
+        self.connection.commit()
+        if self.cursor.rowcount > 0:
+            return True
+        else:
+            return False
+    
+    def get_choices(self, chat_id):
+        '''
+        Get choices for a chat.
+        '''
+        self.cursor.execute(
+            f'SELECT * FROM user_choices WHERE chat_id = "{chat_id}"')
+        try:
+            return self.cursor.fetchall()
+        except:
+            return None
+
 # classes
-class memo:
+class local_mem:
     '''
-    Bot "memory"
+    Bot "memory". Synced to local files.
     '''
-    def __init__(self, engine=None):
-        self.engine = engine
+    def __init__(self):
         self.load_mem()
     
     def create_mem(self):
         '''
-        Create memory items.
+        Create memory. Objects are pickle files.
         '''
-        self.user_choices = pd.DataFrame(
-            columns=['chat_id', 'user_id', 'username', 'tt', 'url', 'title'])
-        self.users_voted = pd.DataFrame(columns=['chat_id', 'user_list'])
-        self.last_poll = pd.DataFrame(columns=['chat_id', 'poll_obj'])
-        self.poll_chats = pd.DataFrame(columns=['poll_id', 'chat_id'])
-        self.poll_counts = pd.DataFrame(columns=['chat_id', 'votes'])
-
-        if self.engine == None:
-            if os.path.isdir('mem') == False:
-                os.mkdir('mem')
-        
+        if os.path.isdir('mem') == False:
+            os.mkdir('mem')	
+        self.user_choices = defaultdict(dict)
+        self.users_voted = defaultdict(dict)
+        self.last_poll = defaultdict(dict)
+        self.poll_chats = {}
+        self.poll_counts = defaultdict(dict)
         self.sync_mem()
 
     def load_mem(self):
         '''
-        Load memory from mem folder or database.
+        Load memory from mem folder. Objects are pickle files.
         '''
-        if self.engine == None:
-            if os.path.exists('mem/user_choices.pkl') and \
-                os.path.exists('mem/users_voted.pkl') and \
-                    os.path.exists('mem/last_poll.pkl') and \
-                        os.path.exists('mem/poll_chats.pkl') and \
-                            os.path.exists('mem/poll_counts.pkl'):
-                with open('mem/user_choices.pkl', 'rb') as f:
-                    self.user_choices = pickle.load(f)
-                with open('mem/users_voted.pkl', 'rb') as f:
-                    self.users_voted = pickle.load(f)
-                with open('mem/last_poll.pkl', 'rb') as f:
-                    self.last_poll = pickle.load(f)
-                with open('mem/poll_chats.pkl', 'rb') as f:
-                    self.poll_chats = pickle.load(f)
-                with open('mem/poll_counts.pkl', 'rb') as f:
-                    self.poll_counts = pickle.load(f)
-            else:
-                self.create_mem()
+        if os.path.exists('mem/user_choices.pkl') and \
+            os.path.exists('mem/users_voted.pkl') and \
+                os.path.exists('mem/last_poll.pkl') and \
+                    os.path.exists('mem/poll_chats.pkl') and \
+                        os.path.exists('mem/poll_counts.pkl'):
+            with open('mem/user_choices.pkl', 'rb') as f:
+                self.user_choices = pickle.load(f)
+            with open('mem/users_voted.pkl', 'rb') as f:
+                self.users_voted = pickle.load(f)
+            with open('mem/last_poll.pkl', 'rb') as f:
+                self.last_poll = pickle.load(f)
+            with open('mem/poll_chats.pkl', 'rb') as f:
+                self.poll_chats = pickle.load(f)
+            with open('mem/poll_counts.pkl', 'rb') as f:
+                self.poll_counts = pickle.load(f)
         else:
-            try:
-                self.df_user_choices = pd.read_sql('user_choices', self.engine)
-                self.df_users_voted = pd.read_sql('users_voted', self.engine)
-                self.df_last_poll = pd.read_sql('last_poll', self.engine)
-                self.df_poll_chats = pd.read_sql('poll_chats', self.engine)
-                self.df_poll_counts = pd.read_sql('poll_counts', self.engine)
-            except:
-                print('Error loading memory from database. Creating new memory.')
-                self.create_mem()
-    
+            self.create_mem()
+
     def sync_mem(self):
         '''
-        Sync memory with mem folder or database.
+        Sync memory with mem folder. Objects are pickle files.
         '''
-        if self.engine == None:
-            with open('mem/user_choices.pkl', 'wb') as f:
-                pickle.dump(self.user_choices, f)
-            with open('mem/users_voted.pkl', 'wb') as f:
-                pickle.dump(self.users_voted, f)
-            with open('mem/last_poll.pkl', 'wb') as f:
-                pickle.dump(self.last_poll, f)
-            with open('mem/poll_chats.pkl', 'wb') as f:
-                pickle.dump(self.poll_chats, f)
-            with open('mem/poll_counts.pkl', 'wb') as f:
-                pickle.dump(self.poll_counts, f)
-        else:
-            self.df_user_choices.to_sql('user_choices', self.engine, if_exists='replace', index=True)
-            self.df_users_voted.to_sql('users_voted', self.engine, if_exists='replace', index=True)
-            self.df_last_poll.to_sql('last_poll', self.engine, if_exists='replace', index=True)
-            self.df_poll_chats.to_sql('poll_chats', self.engine, if_exists='replace', index=True)
-            self.df_poll_counts.to_sql('poll_counts', self.engine, if_exists='replace', index=True)
+        with open('mem/user_choices.pkl', 'wb') as f:
+            pickle.dump(self.user_choices, f)
+        with open('mem/users_voted.pkl', 'wb') as f:
+            pickle.dump(self.users_voted, f)
+        with open('mem/last_poll.pkl', 'wb') as f:
+            pickle.dump(self.last_poll, f)
+        with open('mem/poll_chats.pkl', 'wb') as f:
+            pickle.dump(self.poll_chats, f)
+        with open('mem/poll_counts.pkl', 'wb') as f:
+            pickle.dump(self.poll_counts, f)
