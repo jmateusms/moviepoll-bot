@@ -243,78 +243,126 @@ def clear_extra(message):
             bot.send_message(message.chat.id, f'No extra choice found.')
 
 @bot.message_handler(commands=['clearall'])
-def clear_choices(message): # TODO: update to use sql
+def clear_choices(message):
     # if message.from_user.id in [OWNER_ID]:
-    if True: # use the line above if you want to be the only one who can clear all choices
-        mem.user_choices[message.chat.id].clear()
-        mem.sync_mem()
-        bot.send_message(message.chat.id, 'Cleared all choices.')
+    if True: # use the line above if you want to be the only one who can clear all choices at once
+        if sql:
+            if mem.delete_all_choices(message.chat.id):
+                bot.send_message(message.chat.id, 'All choices cleared.')
+            else:
+                bot.send_message(message.chat.id, 'No choices found.')
+        else:
+            if message.chat.id in mem.user_choices:
+                mem.user_choices[message.chat.id].clear()
+                mem.sync_mem()
+                bot.send_message(message.chat.id, 'All choices cleared.')
+            else:
+                bot.send_message(message.chat.id, 'No choices found.')
     else:
         bot.send_message(message.chat.id, 'You do not possess that kind of power.')
 
 @bot.message_handler(commands=['veto'])
-def veto(message): # TODO: update to use sql
-    if message.chat.id in mem.user_choices:
-        if len(mem.user_choices[message.chat.id]) > 0:
-            markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
-            markup.add(*[value['title'] for _, value in \
-                mem.user_choices[message.chat.id].items() if value['title'] is not None])
-            markup.add('Cancel')
-            get_reply = bot.send_message(
-                message.chat.id, "Please, enter a choice to veto:", reply_markup=markup)
-            bot.register_next_step_handler(get_reply, veto_choice)
+def veto(message):
+    if sql:
+        rows = mem.get_choices(message.chat.id)
+        if rows is None:
+            bot.send_message(message.chat.id, "No choices have been made yet.")
         else:
-            bot.send_message(message.chat.id, "No choices to veto.")
+            markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
+            markup.add(*[choice[6] for choice in rows])
+            get_reply = bot.send_message(
+                message.chat.id, 'Which choice do you want to veto?', reply_markup=markup)
+            bot.register_next_step_handler(get_reply, veto_choice)
     else:
-        bot.send_message(message.chat.id, 'No choices have been made yet.')
+        if message.chat.id in mem.user_choices:
+            if len(mem.user_choices[message.chat.id]) > 0:
+                markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
+                markup.add(*[value['title'] for _, value in \
+                    mem.user_choices[message.chat.id].items() if value['title'] is not None])
+                markup.add('Cancel')
+                get_reply = bot.send_message(
+                    message.chat.id, "Please, enter a choice to veto:", reply_markup=markup)
+                bot.register_next_step_handler(get_reply, veto_choice)
+            else:
+                bot.send_message(message.chat.id, "No choices to veto.")
+        else:
+            bot.send_message(message.chat.id, 'No choices have been made yet.')
 
 @bot.message_handler(commands=[])
-def veto_choice(message): # TODO: update to use sql
-    if message.chat.id in mem.user_choices:
-        if message.text == 'Cancel':
-            markup = types.ReplyKeyboardRemove(selective=False)
-            bot.send_message(message.chat.id, 'No movie vetoed.', reply_markup=markup)
-            return
-        for key, value in mem.user_choices[message.chat.id].items():
-            if value['title'] == message.text:
-                bot.send_message(message.chat.id, f'Vetoed choice {message.text}.', reply_markup=markup)
-                del(mem.user_choices[message.chat.id][key])
-                mem.sync_mem()
-                markup = types.ReplyKeyboardRemove(selective=False)
-                return
+def veto_choice(message):
+    if message.text == 'Cancel':
         markup = types.ReplyKeyboardRemove(selective=False)
-        bot.send_message(message.chat.id, 'Choice not found.', reply_markup=markup)
+        bot.send_message(message.chat.id, 'No movie vetoed.', reply_markup=markup)
+        return
+    if sql:
+        if mem.delete_by_title(message.chat.id, message.text):
+            bot.send_message(message.chat.id, 'Vetoed ' + message.text)
+        else:
+            bot.send_message(message.chat.id, 'Something went wrong. No changes were made.')
     else:
-        markup = types.ReplyKeyboardRemove(selective=False)
-        bot.send_message(message.chat.id, 'No choices have been made yet.', reply_markup=markup)
+        if message.chat.id in mem.user_choices:
+            for key, value in mem.user_choices[message.chat.id].items():
+                if value['title'] == message.text:
+                    bot.send_message(
+                        message.chat.id, f'Vetoed choice {message.text}.', reply_markup=markup)
+                    del(mem.user_choices[message.chat.id][key])
+                    mem.sync_mem()
+                    markup = types.ReplyKeyboardRemove(selective=False)
+                    return
+            markup = types.ReplyKeyboardRemove(selective=False)
+            bot.send_message(message.chat.id, 'Choice not found.', reply_markup=markup)
 
-@bot.message_handler(commands=['reset'])
-def clear_memory(message): # TODO: update to use sql
+@bot.message_handler(commands=['deleteentiredatabase'])
+def clear_memory(message):
     if message.from_user.id in [OWNER_ID]:
-        mem.create_mem()
-        bot.send_message(message.chat.id, 'Bot memory reinitialized.')
+        if sql:
+            mem.reset_data()
+            bot.send_message(message.chat.id, 'Bot memory reinitialized.')
+        else:
+            mem.create_mem()
+            bot.send_message(message.chat.id, 'Bot memory reinitialized.')
     else:
         bot.send_message(message.chat.id, 'You do not possess that kind of power.')
 
 # create a poll from each choice
 @bot.message_handler(commands=['poll'])
-def poll(message): # TODO: update to use sql
-    if len(mem.user_choices[message.chat.id]) > 1:
-        bot.send_message(message.chat.id, 'Creating poll... Here are the choices:')
-        for key, value in mem.user_choices[message.chat.id].items():
-            if value['title'] is not None:
-                bot.send_message(
-                    message.chat.id, f'{value["title"]}: {value["url"]}'.format(key=key, value=value))
-        mem.last_poll[message.chat.id] = bot.send_poll(
-            message.chat.id, 'Choose', [value["title"] for key, value in \
-                mem.user_choices[message.chat.id].items() if value["title"] is not None], \
-                    is_anonymous=False)
-        mem.users_voted[message.chat.id] = []
-        mem.poll_counts[message.chat.id] = len(mem.user_choices[message.chat.id]) * [0]
-        mem.poll_chats[mem.last_poll[message.chat.id].poll.id] = message.chat.id
-        mem.sync_mem()
+def poll(message):
+    if sql:
+        rows = mem.get_choices(message.chat.id)
+        if rows is None:
+            bot.send_message(message.chat.id, "No choices have been made yet.")
+        elif len(rows) < 2:
+            bot.send_message(
+                message.chat.id, 'You need to have at least two choices to create a poll.')
+        else:
+            bot.send_message(message.chat.id, 'Creating poll... Here are the choices:')
+            for row in rows:
+                if row[6] is not None:
+                    bot.send_message(
+                        message.chat.id, f'{row[6]}: {row[5]}',disable_notification=True)
+            poll = bot.send_poll(message.chat.id, random.choice(vote_lines),
+                [choice[6] for choice in rows])
+            bot.send_message(message.chat.id, 'Poll created.')
+            mem.add_poll(message.chat.id, poll.poll.id)
     else:
-        bot.send_message(message.chat.id, 'You need to have at least two choices to create a poll.')
+        if len(mem.user_choices[message.chat.id]) > 1:
+            bot.send_message(message.chat.id, 'Creating poll... Here are the choices:')
+            for key, value in mem.user_choices[message.chat.id].items():
+                if value['title'] is not None:
+                    bot.send_message(
+                        message.chat.id, f'{value["title"]}: {value["url"]}',
+                        disable_notification=True)
+            mem.last_poll[message.chat.id] = bot.send_poll(
+                message.chat.id, random.choice(vote_lines), [value["title"] for key, value in \
+                    mem.user_choices[message.chat.id].items() if value["title"] is not None], \
+                        is_anonymous=False)
+            mem.users_voted[message.chat.id] = []
+            mem.poll_counts[message.chat.id] = len(mem.user_choices[message.chat.id]) * [0]
+            mem.poll_chats[mem.last_poll[message.chat.id].poll.id] = message.chat.id
+            mem.sync_mem()
+        else:
+            bot.send_message(
+                message.chat.id, 'You need to have at least two choices to create a poll.')
 
 # create a dummy poll
 @bot.message_handler(commands=['fakepoll'])

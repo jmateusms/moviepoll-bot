@@ -28,6 +28,15 @@ reroll_exclamations = [
     "Very nice! Great reroll!",
     "I'm about to do to you what Limp Bizkit did to music in the late '90s."
 ]
+vote_lines = [
+    "The choice is an illusion. You already know what you have to do.",
+    "Gods don't have to choose. We take.", "The hardest choices require the strongest wills.",
+    "We must face the choice between what is right and what is easy.",
+    "You always have a choice. You just happen to make the wrong f***ing one.",
+    "We are who we choose to be. Now choose!", "I am made of bourbon and poor choices.",
+    "Killing is making a choice.", "We don't choose the things we believe in, they choose us.",
+    "Choice is an illusion, created between those with power and those without."
+]
 
 # functions
 def ordinal(x):
@@ -124,13 +133,16 @@ class sql_mem:
         '''
         self.cursor.execute('CREATE TABLE IF NOT EXISTS user_choices '\
                         '(unique_id TEXT PRIMARY KEY, user_id INT, chat_id INT, username TEXT, '\
-                        'tt TEXT, url TEXT, title TEXT)')
+                            'tt TEXT, url TEXT, title TEXT)')
         self.cursor.execute('CREATE TABLE IF NOT EXISTS users_voted '\
                     '(chat_id INT PRIMARY KEY, user_id INT)')
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS last_poll '\
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS polls '\
                     '(chat_id INT PRIMARY KEY, poll_id INT)')
         self.cursor.execute('CREATE TABLE IF NOT EXISTS poll_counts '\
-                    '(chat_id INT PRIMARY KEY, poll_id INT, count INT)')
+                    '(unique_title TEXT PRIMARY KEY, chat_id INT, poll_id INT, '\
+                        'title TEXT, count INT)')
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS enable_results '\
+                            '(chat_id INT PRIMARY KEY, enable_results BOOLEAN)')
         self.cursor.execute('CREATE TABLE IF NOT EXISTS results '\
                     '(unique_tt TEXT PRIMARY KEY, chat_id INT, '\
                         'tt TEXT, url TEXT, title TEXT, type TEXT, date DATE)')
@@ -168,6 +180,29 @@ class sql_mem:
         else:
             return False
     
+    def delete_by_title(self, chat_id, title):
+        '''
+        Delete choice from memory. Returns True if successful, False otherwise.
+        '''
+        self.cursor.execute(
+                f'DELETE FROM user_choices WHERE chat_id = "{chat_id}" AND title = "{title}"')
+        self.connection.commit()
+        if self.cursor.rowcount > 0:
+            return True
+        else:
+            return False
+    
+    def delete_all_choices(self, chat_id):
+        '''
+        Delete all choices from memory. Returns True if successful, False otherwise.
+        '''
+        self.cursor.execute('DELETE FROM user_choices WHERE chat_id = "{chat_id}"')
+        self.connection.commit()
+        if self.cursor.rowcount > 0:
+            return True
+        else:
+            return False
+    
     def get_choices(self, chat_id):
         '''
         Get choices for a chat.
@@ -178,6 +213,72 @@ class sql_mem:
             return self.cursor.fetchall()
         except:
             return None
+    
+    def add_poll(self, chat_id, poll_id):
+        '''
+        Add poll to memory.
+        '''
+        self.cursor.execute(
+                f'SELECT * FROM polls WHERE chat_id = "{chat_id}"')
+        if self.cursor.rowcount > 0:
+            self.cursor.execute(
+                f'UPDATE polls'\
+                f'SET poll_id = "{poll_id}"'\
+                f'WHERE chat_id = "{chat_id}"')
+        else:
+            self.cursor.execute(
+                f'INSERT INTO polls'\
+                f'(chat_id, poll_id)'\
+                f'VALUES ("{chat_id}", "{poll_id}")')
+        self.connection.commit()
+    
+    def add_vote(self, chat_id, poll_id, user_id, title):
+        '''
+        Register vote. Save user to users_voted and choice to poll_counts.
+        '''
+        unique_title = get_unique_id(chat_id, title)
+
+        self.cursor.execute(
+            f'SELECT * FROM users_voted WHERE chat_id = "{chat_id}" AND user_id = "{user_id}"')
+        if self.cursor.rowcount > 0:
+            self.cursor.execute(
+                f'UPDATE users_voted'\
+                f'SET user_id = "{user_id}", chat_id = "{chat_id}"'\
+                f'WHERE chat_id = "{chat_id}" AND user_id = "{user_id}"')
+        else:
+            self.cursor.execute(
+                f'INSERT INTO users_voted'\
+                f'(chat_id, user_id)'\
+                f'VALUES ("{chat_id}", "{user_id}")')
+        
+        self.cursor.execute(
+            f'SELECT * FROM poll_counts WHERE unique_title = "{unique_title}"')
+        if self.cursor.rowcount > 0:
+            self.cursor.execute(
+                f'UPDATE poll_counts'\
+                f'SET count = count + 1'\
+                f'WHERE unique_title = "{unique_title}"')
+        else:
+            self.cursor.execute(
+                f'INSERT INTO poll_counts'\
+                f'(unique_title, chat_id, poll_id, title, count)'\
+                f'VALUES ("{unique_title}", "{chat_id}", "{poll_id}", "{title}", 1)')
+        
+        self.connection.commit()
+
+    def reset_database(self):
+        '''
+        Reset database.
+        '''
+        self.cursor.execute('DELETE FROM user_choices')
+        self.cursor.execute('DELETE FROM users_voted')
+        self.cursor.execute('DELETE FROM polls')
+        self.cursor.execute('DELETE FROM poll_counts')
+        self.cursor.execute('DELETE FROM enable_results')
+        self.cursor.execute('DELETE FROM results')
+        self.connection.commit()
+
+        self.initialize_database()
 
 # classes
 class local_mem:
