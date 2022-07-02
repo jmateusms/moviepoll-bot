@@ -4,14 +4,24 @@ from dotenv import load_dotenv
 import telebot
 from telebot import types
 from flask import Flask, request
-import requests
 import random
+import sqlalchemy
 from utils import *
 
 # load api token and owner id
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
 OWNER_ID = int(os.getenv('OWNER_ID'))
+DATABASE_URL = os.getenv('DATABASE_URL').replace('postgres://', 'postgresql+psycopg2://')
+
+# try creating database engine, or fallback to dict memory
+try:
+    engine = sqlalchemy.create_engine(DATABASE_URL)
+    mem = memo(engine)
+    print('Using PostgreSQL database')
+except Exception as e:
+    mem = memo()
+    print(f'Using local dict database due to error: {e}')
 
 # create bot
 bot = telebot.TeleBot(TOKEN)
