@@ -115,8 +115,6 @@ class sql_mem:
         database = result.path[1:]
         hostname = result.hostname
         port = result.port
-
-        username, password, database, hostname, port = get_database_credentials(DATABASE_URL)
         
         self.connection = psycopg2.connect(
             database = database,
@@ -157,14 +155,14 @@ class sql_mem:
         if self.cursor.rowcount > 0:
             self.cursor.execute(
                 f'UPDATE user_choices'\
-                f'SET user_id = "{user_id}", chat_id = {chat_id}, username = "{username}",'\
+                f'SET user_id = {user_id}, chat_id = {chat_id}, username = "{username}",'\
                     f'choice = "{tt}", url = "{url}", title = "{title}"'\
                 f'WHERE unique_id = "{unique_id}"')
         else:
             self.cursor.execute(
                 f'INSERT INTO user_choices'\
                 f'(unique_id, user_id, chat_id, username, tt, url, title)'\
-                f'VALUES ("{unique_id}", "{user_id}", {chat_id}, "{username}", '\
+                f'VALUES ("{unique_id}", {user_id}, {chat_id}, "{username}", '\
                     f'"{tt}", "{url}", "{title}")')
         self.connection.commit()
     
@@ -222,13 +220,13 @@ class sql_mem:
         
         self.cursor.execute(
             f'REPLACE INTO polls (chat_id, poll_id, poll_active)'\
-            f'VALUES ({chat_id}, "{poll_id}", TRUE)')
+            f'VALUES ({chat_id}, {poll_id}, TRUE)')
         
         for i in range(len(titles)):
             self.cursor.execute(
                 'REPLACE INTO poll_counts '\
                     '(unique_title, chat_id, poll_id, option_id, title, count)'\
-                f'VALUES ("{unique_titles[i]}", {chat_id}, "{poll_id}", "{i}", "{titles[i]}", 0)')
+                f'VALUES ("{unique_titles[i]}", {chat_id}, {poll_id}, "{i}", "{titles[i]}", 0)')
         
         self.connection.commit()
     
@@ -237,7 +235,7 @@ class sql_mem:
         Check if poll exists. Returns chat_id if exists, None otherwise.
         '''
         self.cursor.execute(
-            f'SELECT chat_id FROM polls WHERE poll_id = "{poll_id}" AND poll_active = TRUE')
+            f'SELECT chat_id FROM polls WHERE poll_id = {poll_id} AND poll_active = TRUE')
         try:
             return self.cursor.fetchone()[0]
         except:
@@ -250,7 +248,7 @@ class sql_mem:
         unique_title = get_unique_id(chat_id, option_id)
 
         self.cursor.execute(
-            f'REPLACE INTO users_voted (chat_id, user_id) VALUES ({chat_id}, "{user_id}")')
+            f'REPLACE INTO users_voted (chat_id, user_id) VALUES ({chat_id}, {user_id})')
         self.cursor.execute(
             f'UPDATE poll_counts SET count = count + 1 WHERE unique_title = "{unique_title}"')
         
@@ -261,7 +259,7 @@ class sql_mem:
         Check if user has voted.
         '''
         self.cursor.execute(
-            f'SELECT * FROM users_voted WHERE chat_id = {chat_id} AND user_id = "{user_id}"')
+            f'SELECT * FROM users_voted WHERE chat_id = {chat_id} AND user_id = {user_id}')
         if self.cursor.rowcount > 0:
             return True
         else:

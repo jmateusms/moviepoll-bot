@@ -313,6 +313,9 @@ def veto_choice(message):
                     return
             markup = types.ReplyKeyboardRemove(selective=False)
             bot.send_message(message.chat.id, 'Choice not found.', reply_markup=markup)
+        else:
+            markup = types.ReplyKeyboardRemove(selective=False)
+            bot.send_message(message.chat.id, 'No choices found.', reply_markup=markup)
 
 @bot.message_handler(commands=['deleteentiredatabase'])
 def clear_memory(message):
