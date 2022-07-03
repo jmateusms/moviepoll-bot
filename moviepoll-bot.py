@@ -338,9 +338,10 @@ def clear_memory(message):
 def poll(message):
     if sql:
         rows = mem.get_choices(message.chat.id)
+        films = [row[6] for row in rows if row[6] is not None]
         if rows is None:
             bot.send_message(message.chat.id, "No choices have been made yet.")
-        elif len(rows) < 2:
+        elif len(films) < 2:
             bot.send_message(
                 message.chat.id, 'You need to have at least two choices to create a poll.')
         else:
@@ -349,7 +350,6 @@ def poll(message):
                 if row[6] is not None:
                     bot.send_message(
                         message.chat.id, f'{row[6]}: {row[5]}', disable_notification=True)
-            films = [row[6] for row in rows if row[6] is not None]
             poll = bot.send_poll(message.chat.id, random.choice(vote_lines),
                 films, is_anonymous=False)
             mem.add_poll(message.chat.id, poll.poll.id, films)
