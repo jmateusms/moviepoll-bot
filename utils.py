@@ -132,24 +132,24 @@ class sql_mem:
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS user_choices "\
             "(unique_id TEXT PRIMARY KEY, user_id INT, chat_id INT, username TEXT, "\
-                "tt TEXT, url TEXT, title TEXT)")
+                "tt TEXT, url TEXT, title TEXT);")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS users_voted "\
-            "(chat_id INT PRIMARY KEY, user_id INT, option_id INT)")
+            "(chat_id INT PRIMARY KEY, user_id INT, option_id INT);")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS polls "\
-            "(chat_id INT PRIMARY KEY, poll_id INT, poll_active BOOLEAN)")
+            "(chat_id INT PRIMARY KEY, poll_id INT, poll_active BOOLEAN);")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS poll_counts "\
             "(unique_title TEXT PRIMARY KEY, chat_id INT, poll_id INT, "\
-                "option_id INT, title TEXT, count INT)")
+                "option_id INT, title TEXT, count INT);")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS enable_results "\
-            "(chat_id INT PRIMARY KEY, enable_results BOOLEAN)")
+            "(chat_id INT PRIMARY KEY, enable_results BOOLEAN);")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS results "\
             "(unique_tt TEXT PRIMARY KEY, chat_id INT, "\
-                "tt TEXT, url TEXT, title TEXT, type TEXT, date DATE)")
+                "tt TEXT, url TEXT, title TEXT, type TEXT, date DATE);")
         self.connection.commit()
     
     def add_choice(self, unique_id, user_id, chat_id, username, tt, url, title):
@@ -176,7 +176,7 @@ class sql_mem:
         Delete choice from memory. Returns True if successful, False otherwise.
         '''
         self.cursor.execute(
-                "DELETE FROM user_choices WHERE unique_id = %s", (unique_id,))
+                "DELETE FROM user_choices WHERE unique_id = %s;", (unique_id,))
         self.connection.commit()
         if self.cursor.rowcount > 0:
             return True
@@ -188,7 +188,7 @@ class sql_mem:
         Delete choice from memory. Returns True if successful, False otherwise.
         '''
         self.cursor.execute(
-                "DELETE FROM user_choices WHERE chat_id = %s AND title = %s", (chat_id, title))
+                "DELETE FROM user_choices WHERE chat_id = %s AND title = %s;", (chat_id, title))
         self.connection.commit()
         if self.cursor.rowcount > 0:
             return True
@@ -199,7 +199,7 @@ class sql_mem:
         '''
         Delete all choices from memory. Returns True if successful, False otherwise.
         '''
-        self.cursor.execute("DELETE FROM user_choices WHERE chat_id = %s", (chat_id,))
+        self.cursor.execute("DELETE FROM user_choices WHERE chat_id = %s;", (chat_id,))
         self.connection.commit()
         if self.cursor.rowcount > 0:
             return True
@@ -211,7 +211,7 @@ class sql_mem:
         Get choices for a chat.
         '''
         self.cursor.execute(
-            "SELECT * FROM user_choices WHERE chat_id = %s", (chat_id,))
+            "SELECT * FROM user_choices WHERE chat_id = %s;", (chat_id,))
         try:
             return self.cursor.fetchall()
         except:
