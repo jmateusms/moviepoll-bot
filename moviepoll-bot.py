@@ -384,7 +384,7 @@ def fakepoll(message):
 
 # check if all users in user_choices have voted
 @bot.poll_answer_handler()
-def poll_complete(pollAnswer): # TODO: update to use sql
+def poll_complete(pollAnswer):
     try:
         username = pollAnswer.from_user.username
     except:
