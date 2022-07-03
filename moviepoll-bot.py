@@ -180,13 +180,12 @@ def display_choices(message):
         if rows is None:
             bot.send_message(message.chat.id, "No choices have been made yet.")
         else:
-            
             choices = []
-            for choice in rows:
-                if choice[6] is not None:
-                    choices.append(f'{choice[3]}: {choice[6]}')
+            for row in rows:
+                if row[6] is not None:
+                    choices.append(f'{row[3]}: {row[6]}')
                 else:
-                    choices.append(f'{choice[3]}: no suggestion')
+                    choices.append(f'{row[3]}: no suggestion')
             bot.send_message(message.chat.id, 'Current participants:\n' + '\n'.join(choices))
     else:
         if message.chat.id in mem.user_choices:
@@ -231,7 +230,7 @@ def clear_choice(message):
 @bot.message_handler(commands=['clearextra'])
 def clear_extra(message):
     if sql:
-        if mem.delete_choice(get_unique_id(chat_id, user_id)):
+        if mem.delete_choice(get_unique_id(message.chat.id, 0)):
             bot.send_message(message.chat.id, 'Extra choice deleted.')
         else:
             bot.send_message(message.chat.id, 'No extra choice found.')
@@ -270,7 +269,8 @@ def veto(message):
             bot.send_message(message.chat.id, "No choices have been made yet.")
         else:
             markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
-            markup.add(*[choice[6] for choice in rows])
+            markup.add(*[row[6] for row in rows if row[6] is not None])
+            markup.add('Cancel')
             get_reply = bot.send_message(
                 message.chat.id, 'Which choice do you want to veto?', reply_markup=markup)
             bot.register_next_step_handler(get_reply, veto_choice)
