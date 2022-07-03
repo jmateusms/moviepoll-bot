@@ -157,7 +157,7 @@ class sql_mem:
         Add choice to memory.
         '''
         self.cursor.execute(
-                f"SELECT * FROM user_choices WHERE unique_id = '{unique_id}'")
+                "SELECT * FROM user_choices WHERE unique_id = %s", (unique_id,))
         if self.cursor.rowcount > 0:
             self.cursor.execute(
                 """UPDATE user_choices
@@ -176,7 +176,7 @@ class sql_mem:
         Delete choice from memory. Returns True if successful, False otherwise.
         '''
         self.cursor.execute(
-                "DELETE FROM user_choices WHERE unique_id = %s", (unique_id))
+                "DELETE FROM user_choices WHERE unique_id = %s", (unique_id,))
         self.connection.commit()
         if self.cursor.rowcount > 0:
             return True
@@ -199,7 +199,7 @@ class sql_mem:
         '''
         Delete all choices from memory. Returns True if successful, False otherwise.
         '''
-        self.cursor.execute("DELETE FROM user_choices WHERE chat_id = %s", (chat_id))
+        self.cursor.execute("DELETE FROM user_choices WHERE chat_id = %s", (chat_id,))
         self.connection.commit()
         if self.cursor.rowcount > 0:
             return True
@@ -211,7 +211,7 @@ class sql_mem:
         Get choices for a chat.
         '''
         self.cursor.execute(
-            "SELECT * FROM user_choices WHERE chat_id = %s", (chat_id))
+            "SELECT * FROM user_choices WHERE chat_id = %s", (chat_id,))
         try:
             return self.cursor.fetchall()
         except:
@@ -223,7 +223,7 @@ class sql_mem:
         '''
         unique_titles = [get_unique_id(chat_id, i) for i in range(len(titles))]
         
-        self.cursor.execute("SELECT * FROM polls WHERE chat_id = %s", (chat_id))
+        self.cursor.execute("SELECT * FROM polls WHERE chat_id = %s", (chat_id,))
         if self.cursor.rowcount > 0:
             self.cursor.execute(
                 """UPDATE polls
@@ -237,7 +237,7 @@ class sql_mem:
         
         for i in range(len(titles)):
             self.cursor.execute(
-                "SELECT * FROM poll_counts WHERE unique_title = %s;", (unique_titles[i]))
+                "SELECT * FROM poll_counts WHERE unique_title = %s;", (unique_titles[i],))
             if self.cursor.rowcount > 0:
                 self.cursor.execute(
                     "DELETE FROM poll_counts WHERE chat_id = %s AND unique_title = %s;",
@@ -255,8 +255,7 @@ class sql_mem:
         Check if poll exists. Returns chat_id if exists, None otherwise.
         '''
         self.cursor.execute(
-            "SELECT chat_id FROM polls WHERE poll_id = %s AND poll_active = 'TRUE';",
-            (poll_id))
+            "SELECT chat_id FROM polls WHERE poll_id = %s AND poll_active = 'TRUE';", (poll_id,))
         try:
             return self.cursor.fetchone()[0]
         except:
@@ -281,7 +280,7 @@ class sql_mem:
                 (user_id, chat_id, option_id)
                 values (%s, %s, %s);""", (user_id, chat_id, option_id))
         self.cursor.execute(
-            "UPDATE poll_counts SET count = count + 1 WHERE unique_title = %s;", (unique_title))
+            "UPDATE poll_counts SET count = count + 1 WHERE unique_title = %s;", (unique_title,))
         
         self.connection.commit()
     
@@ -302,7 +301,7 @@ class sql_mem:
                     (user_id, chat_id))
                 self.cursor.execute(
                     "UPDATE poll_counts SET count = count - 1 WHERE unique_title = %s;",
-                    (unique_title))
+                    (unique_title,))
         
     def check_user_vote(self, chat_id, user_id):
         '''
@@ -321,10 +320,10 @@ class sql_mem:
         If all users in user_choices are present in users_voted, return True. False otherwise.
         '''
         self.cursor.execute(
-            "SELECT user_id FROM users_voted WHERE chat_id = %s;", (chat_id))
+            "SELECT user_id FROM users_voted WHERE chat_id = %s;", (chat_id,))
         users_voted = self.cursor.fetchall()
         self.cursor.execute(
-            "SELECT user_id FROM user_choices WHERE chat_id = %s;", (chat_id))
+            "SELECT user_id FROM user_choices WHERE chat_id = %s;", (chat_id,))
         users_choices = self.cursor.fetchall()
         # check if all users in user_choices are present in users_voted
         for user in users_choices:
@@ -339,7 +338,7 @@ class sql_mem:
         If there is a tie, return None.
         '''
         self.cursor.execute(
-            "SELECT option_id, count, title FROM poll_counts WHERE chat_id = %s;", (chat_id))
+            "SELECT option_id, count, title FROM poll_counts WHERE chat_id = %s;", (chat_id,))
         
         counts = self.cursor.fetchall()
         max_votes = max([i[1] for i in counts])
@@ -357,7 +356,7 @@ class sql_mem:
         Returns None if there is a reroll.
         '''
         self.cursor.execute(
-            "SELECT option_id, count, title FROM poll_counts WHERE chat_id = %s;", (chat_id))
+            "SELECT option_id, count, title FROM poll_counts WHERE chat_id = %s;", (chat_id,))
         
         counts = self.cursor.fetchall()
         max_votes = max([i[1] for i in counts])
@@ -382,13 +381,13 @@ class sql_mem:
         Disable poll and delete all choices, users_voted and poll_counts.
         '''
         self.cursor.execute(
-            "UPDATE polls SET poll_active = 'FALSE' WHERE chat_id = %s;", (chat_id))
+            "UPDATE polls SET poll_active = 'FALSE' WHERE chat_id = %s;", (chat_id,))
         self.cursor.execute(
-            "DELETE FROM user_choices WHERE chat_id = %s;", (chat_id))
+            "DELETE FROM user_choices WHERE chat_id = %s;", (chat_id,))
         self.cursor.execute(
-            "DELETE FROM users_voted WHERE chat_id = %s;", (chat_id))
+            "DELETE FROM users_voted WHERE chat_id = %s;", (chat_id,))
         self.cursor.execute(
-            "DELETE FROM poll_counts WHERE chat_id = %s;", (chat_id))
+            "DELETE FROM poll_counts WHERE chat_id = %s;", (chat_id,))
         
         self.connection.commit()
     
@@ -397,7 +396,7 @@ class sql_mem:
         Randomly select a winner from current choices.
         '''
         self.cursor.execute(
-            "SELECT option_id, title FROM user_choices WHERE chat_id = %s;", (chat_id))
+            "SELECT option_id, title FROM user_choices WHERE chat_id = %s;", (chat_id,))
         choices = self.cursor.fetchall()
         
         if len(choices) == 0:
