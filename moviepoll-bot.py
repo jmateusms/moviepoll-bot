@@ -396,12 +396,13 @@ def poll_complete(pollAnswer):
     except:
         username = pollAnswer.from_user.first_name
     if sql:
-        chat_id = mem.get_chat_from_poll(pollAnswer.poll_id)
+        chat_id = pollAnswer.chat.id
         if chat_id is None:
             return
         user_id = pollAnswer.user.id
-        print(pollAnswer)
         bot.send_message(chat_id, pollAnswer.option_ids[0])
+        bot.send_message(chat_id, dir(pollAnswer))
+        bot.send_message(chat_id, pollAnswer)
         if mem.check_user_vote(chat_id, user_id):
             mem.remove_vote(chat_id, user_id, pollAnswer.option_ids[0])
             mem.add_vote(chat_id, user_id, pollAnswer.option_ids[0])
