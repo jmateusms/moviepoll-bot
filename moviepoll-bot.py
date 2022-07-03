@@ -353,6 +353,7 @@ def poll(message):
             poll = bot.send_poll(message.chat.id, random.choice(vote_lines),
                 films, is_anonymous=False)
             mem.add_poll(message.chat.id, poll.poll.id, films)
+            bot.send_message(message.chat.id, 'Poll created.')
     else:
         if len(mem.user_choices[message.chat.id]) > 1:
             bot.send_message(message.chat.id, 'Creating poll... Here are the choices:')

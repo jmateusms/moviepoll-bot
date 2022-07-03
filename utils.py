@@ -295,13 +295,13 @@ class sql_mem:
             (user_id, chat_id))
         if self.cursor.rowcount > 0:
             old_option_id = self.cursor.fetchone()[0]
-            if old_option_id != option_id:
-                self.cursor.execute(
-                    "DELETE FROM users_voted WHERE user_id = %s AND chat_id = %s;",
-                    (user_id, chat_id))
-                self.cursor.execute(
-                    "UPDATE poll_counts SET count = count - 1 WHERE unique_title = %s;",
-                    (unique_title,))
+            self.cursor.execute(
+                "DELETE FROM users_voted WHERE user_id = %s AND chat_id = %s;",
+                (user_id, chat_id))
+            self.cursor.execute(
+                "UPDATE poll_counts SET count = count - 1 WHERE unique_title = %s;",
+                (unique_title,))
+            self.connection.commit()
         
     def check_user_vote(self, chat_id, user_id):
         '''
@@ -327,7 +327,7 @@ class sql_mem:
         users_choices = self.cursor.fetchall()
         # check if all users in user_choices are present in users_voted
         for user in users_choices:
-            if user not in users_voted:
+            if user not in users_voted and user[0] != 0:
                 return False
         return True
     
