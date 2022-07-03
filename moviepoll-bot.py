@@ -401,6 +401,7 @@ def poll_complete(pollAnswer):
         username = pollAnswer.user.first_name
     if sql:
         chat_id = mem.get_chat_from_poll(pollAnswer.poll_id)
+        bot.send_message(chat_id, 'chat id found')
         if chat_id is None:
             return
         user_id = pollAnswer.user.id
