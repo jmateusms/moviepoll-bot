@@ -325,7 +325,7 @@ def veto_choice(message):
 def clear_memory(message):
     if message.from_user.id in [OWNER_ID]:
         if sql:
-            mem.reset_data()
+            mem.reset_database()
             bot.send_message(message.chat.id, 'Bot memory reinitialized.')
         else:
             mem.create_mem()
