@@ -255,7 +255,7 @@ class sql_mem:
         Check if poll exists. Returns chat_id if exists, None otherwise.
         '''
         self.cursor.execute(
-            "SELECT chat_id FROM polls WHERE poll_id = %s AND poll_active = 'TRUE';", (poll_id,))
+            "SELECT chat_id FROM polls WHERE poll_id = %s AND poll_active = %s;", (poll_id, True))
         try:
             return self.cursor.fetchone()[0]
         except:
@@ -381,7 +381,7 @@ class sql_mem:
         Disable poll and delete all choices, users_voted and poll_counts.
         '''
         self.cursor.execute(
-            "UPDATE polls SET poll_active = 'FALSE' WHERE chat_id = %s;", (chat_id,))
+            "UPDATE polls SET poll_active = %s WHERE chat_id = %s;", (False, chat_id))
         self.cursor.execute(
             "DELETE FROM user_choices WHERE chat_id = %s;", (chat_id,))
         self.cursor.execute(
