@@ -235,13 +235,9 @@ class sql_mem:
                 (chat_id, poll_id, poll_active)
                 VALUES (%s, %s, %s);""", (chat_id, poll_id, True))
         
+        self.cursor.execute(
+            "DELETE FROM poll_counts WHERE chat_id = %s;", (chat_id,))
         for i in range(len(titles)):
-            self.cursor.execute(
-                "SELECT * FROM poll_counts WHERE unique_title = %s;", (unique_titles[i],))
-            if self.cursor.rowcount > 0:
-                self.cursor.execute(
-                    "DELETE FROM poll_counts WHERE chat_id = %s AND unique_title = %s;",
-                    (chat_id, unique_titles[i]))
             self.cursor.execute(
                 """INSERT INTO poll_counts
                 (unique_title, chat_id, poll_id, option_id, title, count)
