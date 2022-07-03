@@ -154,14 +154,14 @@ class sql_mem:
                 f"SELECT * FROM user_choices WHERE unique_id = '{unique_id}'")
         if self.cursor.rowcount > 0:
             self.cursor.execute(
-                f"UPDATE user_choices"\
-                f"SET user_id = {user_id}, chat_id = {chat_id}, username = '{username}',"\
-                    f"choice = '{tt}', url = '{url}', title = '{title}'"\
+                f"UPDATE user_choices "\
+                f"SET user_id = {user_id}, chat_id = {chat_id}, username = '{username}', "\
+                    f"choice = '{tt}', url = '{url}', title = '{title}' "\
                 f"WHERE unique_id = '{unique_id}'")
         else:
             self.cursor.execute(
-                f"INSERT INTO user_choices"\
-                f"(unique_id, user_id, chat_id, username, tt, url, title)"\
+                f"INSERT INTO user_choices "\
+                f"(unique_id, user_id, chat_id, username, tt, url, title) "\
                 f"VALUES ('{unique_id}', {user_id}, {chat_id}, '{username}', "\
                     f"'{tt}', '{url}', '{title}')")
         self.connection.commit()
@@ -221,7 +221,7 @@ class sql_mem:
         self.cursor.execute(f"SELECT * FROM polls WHERE chat_id = {chat_id}")
         if self.cursor.rowcount > 0:
             self.cursor.execute(
-                f"UPDATE polls SET poll_id = {poll_id}, poll_active = 'TRUE'"\
+                f"UPDATE polls SET poll_id = {poll_id}, poll_active = 'TRUE' "\
                     f"WHERE chat_id = {chat_id}")
         else:
             self.cursor.execute(
