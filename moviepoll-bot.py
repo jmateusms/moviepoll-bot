@@ -186,7 +186,10 @@ def display_choices(message):
                     choices.append(f'{row[3]}: {row[6]}')
                 else:
                     choices.append(f'{row[3]}: no suggestion')
-            bot.send_message(message.chat.id, 'Current participants:\n' + '\n'.join(choices))
+            if len(choices) > 0:
+                bot.send_message(message.chat.id, 'Current participants:\n' + '\n'.join(choices))
+            else:
+                bot.send_message(message.chat.id, "No choices found.")
     else:
         if message.chat.id in mem.user_choices:
             if len(mem.user_choices[message.chat.id]) == 0:
