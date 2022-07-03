@@ -401,7 +401,7 @@ def poll_complete(pollAnswer):
     if sql:
         print(dir(pollAnswer))
         print(pollAnswer)
-        chat_id = pollAnswer.chat.chat_id
+        chat_id = pollAnswer.poll.chat.id
         if chat_id is None:
             return
         user_id = pollAnswer.user.id
