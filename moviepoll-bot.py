@@ -339,11 +339,11 @@ def poll(message):
             for row in rows:
                 if row[6] is not None:
                     bot.send_message(
-                        message.chat.id, f'{row[6]}: {row[5]}',disable_notification=True)
+                        message.chat.id, f'{row[6]}: {row[5]}', disable_notification=True)
+            films = [row[6] for row in rows if row[6] is not None]
             poll = bot.send_poll(message.chat.id, random.choice(vote_lines),
-                [choice[6] for choice in rows])
-            bot.send_message(message.chat.id, 'Poll created.')
-            mem.add_poll(message.chat.id, poll.poll.id)
+                films, is_anonymous=False)
+            mem.add_poll(message.chat.id, poll.poll.id, films)
     else:
         if len(mem.user_choices[message.chat.id]) > 1:
             bot.send_message(message.chat.id, 'Creating poll... Here are the choices:')
@@ -366,84 +366,146 @@ def poll(message):
 
 # create a dummy poll
 @bot.message_handler(commands=['fakepoll'])
-def poll(message): # TODO: update to use sql
+def fakepoll(message):
     if message.from_user.id in [OWNER_ID]:
-        mem.last_poll[message.chat.id] = bot.send_poll(
-            message.chat.id, 'Choose', ['The Godfather', 'Forrest Gump'], is_anonymous=False)
-        mem.users_voted[message.chat.id] = []
-        mem.poll_chats[mem.last_poll[message.chat.id].poll.id] = message.chat.id
-        mem.poll_counts[message.chat.id] = 2 * [0]
-        mem.sync_mem()
+        if sql:
+            poll = bot.send_poll(message.chat.id, random.choice(vote_lines),
+                ['The Godfather', 'Forrest Gump', 'The Shawshank Redemption'], is_anonymous=False)
+            mem.add_poll(message.chat.id, poll.poll.id)
+        else:
+            mem.last_poll[message.chat.id] = bot.send_poll(
+                message.chat.id, 'Choose', ['The Godfather', 'Forrest Gump'], is_anonymous=False)
+            mem.users_voted[message.chat.id] = []
+            mem.poll_chats[mem.last_poll[message.chat.id].poll.id] = message.chat.id
+            mem.poll_counts[message.chat.id] = 2 * [0]
+            mem.sync_mem()
     else:
         bot.send_message(message.chat.id, 'You do not possess that kind of power.')
 
 # check if all users in user_choices have voted
 @bot.poll_answer_handler()
 def poll_complete(pollAnswer): # TODO: update to use sql
-    if not pollAnswer.poll_id in mem.poll_chats:
-        return
-    chat_id = mem.poll_chats[pollAnswer.poll_id]
-    if mem.last_poll[chat_id] is None:
-        return
-    if pollAnswer.user.id not in mem.users_voted[chat_id]:
-        mem.poll_counts[chat_id][pollAnswer.option_ids[0]] += 1
-        mem.users_voted[chat_id].append(pollAnswer.user.id)
-        bot.send_message(chat_id, f'User {pollAnswer.user.first_name} has voted.')
+    try:
+        username = pollAnswer.from_user.username
+    except:
+        username = pollAnswer.from_user.first_name
+    if sql:
+        chat_id = mem.get_chat_from_poll(pollAnswer.poll_id)
+        if chat_id is None:
+            return
+        user_id = pollAnswer.user.id
+        if mem.check_user_vote(chat_id, user_id):
+            bot.send_message(chat_id, f'User {username} has voted (again).')
+        else:
+            mem.add_vote(chat_id, user_id, pollAnswer.option_ids[0])
+            bot.send_message(chat_id, f'User {username} has voted.')
+        if mem.check_poll_complete(chat_id):
+            winner = mem.get_poll_winner(chat_id)
+            if winner is not None:
+                bot.send_message(chat_id, f'Poll complete! Winner: {winner}')
+            else:
+                rerolls = 0
+                reroll_chance, winner = mem.random_poll_winner(chat_id)
+                bot.send_message(chat_id, f'{random.choice(exclamations)} '\
+                    f'There is a tie!\nChoosing random option. Reroll chance: '\
+                        f'{reroll_chance:.2f}%')
+                while winner == None:
+                    rerolls += 1
+                    reroll_chance, winner = mem.random_poll_winner(chat_id, reroll_chance=reroll_chance)
+                    msg = f'{random.choice(reroll_exclamations)}\n{random.choice(exclamations)} '\
+                            f'Thats the {ordinal(rerolls)} reroll.'
+                    bot.send_message(chat_id, msg)
+                bot.send_message(chat_id, f'Poll complete! Random winner after poll tie: {winner}')
+            mem.end_poll(chat_id)
     else:
-        bot.send_message(chat_id, f'User {pollAnswer.user.first_name} has voted (again).')
-    if (set(mem.user_choices[chat_id].keys()) - set(['dummy', '0'])).issubset(set(mem.users_voted[chat_id])):
-        bot.stop_poll(chat_id, mem.last_poll[chat_id].id)
-        ids = mem.poll_counts[chat_id]
-        winner_count = max(ids)
-        choices = [index for index, value in enumerate(ids) if value == winner_count]
-        if ids.count(winner_count) > 1:
+        if not pollAnswer.poll_id in mem.poll_chats:
+            return
+        chat_id = mem.poll_chats[pollAnswer.poll_id]
+        if mem.last_poll[chat_id] is None:
+            return
+        if pollAnswer.user.id not in mem.users_voted[chat_id]:
+            mem.poll_counts[chat_id][pollAnswer.option_ids[0]] += 1
+            mem.users_voted[chat_id].append(pollAnswer.user.id)
+            bot.send_message(chat_id, f'User {username} has voted.')
+        else:
+            bot.send_message(chat_id, f'User {username} has voted (again).')
+        if (set(mem.user_choices[chat_id].keys()) - set(['dummy', '0'])).issubset(set(mem.users_voted[chat_id])):
+            bot.stop_poll(chat_id, mem.last_poll[chat_id].id)
+            ids = mem.poll_counts[chat_id]
+            winner_count = max(ids)
+            choices = [index for index, value in enumerate(ids) if value == winner_count]
+            if ids.count(winner_count) > 1:
+                random_key = None
+                reroll_slots = random.randint(1, len(choices))
+                keys = choices + reroll_slots * [None]
+                bot.send_message(chat_id, f'{random.choice(exclamations)} '\
+                    f'There is a tie!\nChoosing random option. Reroll chance: '\
+                        f'{reroll_slots*100/(len(keys)):.2f}%')
+                rerolls = 0
+                while random_key == None:
+                    random_key = random.choice(keys)
+                    if random_key == None:
+                        rerolls += 1
+                        msg = f'{random.choice(reroll_exclamations)}\n{random.choice(exclamations)} '\
+                            f'Thats the {ordinal(rerolls)} reroll.'
+                        bot.send_message(chat_id, msg)
+                bot.send_message(chat_id, f'Random winner after poll tie: '\
+                                        f'{mem.last_poll[chat_id].poll.options[random_key].text}')
+            else:
+                bot.send_message(
+                    chat_id, f'Winner: {mem.last_poll[chat_id].poll.options[choices[0]].text}')
+            mem.user_choices[chat_id].clear()
+            mem.users_voted[chat_id].clear()
+            mem.poll_counts[chat_id].clear()
+            bot.send_message(chat_id, 'Poll complete!')
+        mem.sync_mem()
+
+@bot.message_handler(commands=['random'])
+def random_choice(message):
+    if sql:
+        choices = mem.get_choices(message.chat.id)
+        if choices is None:
+            bot.send_message(message.chat.id, 'No choices have been made.')
+            return
+        elif len(choices) == 1:
+            bot.send_message(message.chat.id, \
+                'You need to have at least two options to choose from.')
+            return
+        reroll_chance, winner = mem.random_winner(message.chat.id)
+        bot.send_message(message.chat.id, \
+            f'Choosing random option. Reroll chance: {reroll_chance}%.')
+        rerolls = 0
+        while winner == None:
+            rerolls += 1
+            reroll_chance, winner = mem.random_winner(message.chat.id, reroll_chance=reroll_chance)
+            msg = f'{random.choice(reroll_exclamations)}\n{random.choice(exclamations)} '\
+                        f'Thats the {ordinal(rerolls)} reroll.'
+            bot.send_message(message.chat.id, msg)
+        bot.send_message(chat_id, f'Poll complete! Random winner: {winner}')
+        mem.end_poll(chat_id)
+    else:
+        choices = mem.user_choices[message.chat.id]
+        if len(choices) > 1:
             random_key = None
             reroll_slots = random.randint(1, len(choices))
-            keys = choices + reroll_slots * [None]
-            bot.send_message(chat_id, f'{random.choice(exclamations)} There is a tie!\nChoosing random option. Reroll chance: {reroll_slots*100/(len(keys)):.2f}%')
+            keys = list(choices.keys()) + reroll_slots * [None]
+            bot.send_message(message.chat.id, \
+                f'Choosing random option. Reroll chance: {reroll_slots*100/(len(keys)):.2f}%.')
             rerolls = 0
             while random_key == None:
                 random_key = random.choice(keys)
                 if random_key == None:
                     rerolls += 1
                     msg = f'{random.choice(reroll_exclamations)}\n{random.choice(exclamations)} '\
-                          f'Thats the {ordinal(rerolls)} reroll.'
-                    bot.send_message(chat_id, msg)
-            bot.send_message(chat_id, f'Random winner after poll tie: '\
-                                      f'{mem.last_poll[chat_id].poll.options[random_key].text}')
+                        f'Thats the {ordinal(rerolls)} reroll.'
+                    bot.send_message(message.chat.id, msg)
+            bot.send_message(message.chat.id, f'Random winner: {choices[random_key]["title"]}')
+            mem.user_choices[message.chat.id].clear()
+            mem.users_voted[message.chat.id].clear()
+            mem.poll_counts[message.chat.id].clear()
+            mem.sync_mem()
         else:
-            bot.send_message(
-                chat_id, f'Winner: {mem.last_poll[chat_id].poll.options[choices[0]].text}')
-        mem.user_choices[chat_id].clear()
-        mem.users_voted[chat_id].clear()
-        mem.poll_counts[chat_id].clear()
-        bot.send_message(chat_id, 'Poll complete!')
-    mem.sync_mem()
-
-@bot.message_handler(commands=['random'])
-def random_choice(message): # TODO: update to use sql
-    choices = mem.user_choices[message.chat.id]
-    if len(choices) > 1:
-        random_key = None
-        reroll_slots = random.randint(1, len(choices))
-        keys = list(choices.keys()) + reroll_slots * [None]
-        bot.send_message(message.chat.id, \
-            f'Choosing random option. Reroll chance: {reroll_slots*100/(len(keys)):.2f}%.')
-        rerolls = 0
-        while random_key == None:
-            random_key = random.choice(keys)
-            if random_key == None:
-                rerolls += 1
-                msg = f'{random.choice(reroll_exclamations)}\n{random.choice(exclamations)} '\
-                      f'Thats the {ordinal(rerolls)} reroll.'
-                bot.send_message(message.chat.id, msg)
-        bot.send_message(message.chat.id, f'Random winner: {choices[random_key]["title"]}')
-        mem.user_choices[message.chat.id].clear()
-        mem.users_voted[message.chat.id].clear()
-        mem.poll_counts[message.chat.id].clear()
-        mem.sync_mem()
-    else:
-        bot.send_message(message.chat.id, 'You need to have at least two options to choose from.')
+            bot.send_message(message.chat.id, 'You need to have at least two options to choose from.')
 
 if __name__ == "__main__":
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
