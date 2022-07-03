@@ -295,10 +295,12 @@ def veto_choice(message):
         bot.send_message(message.chat.id, 'No movie vetoed.', reply_markup=markup)
         return
     if sql:
+        markup = types.ReplyKeyboardRemove(selective=False)
         if mem.delete_by_title(message.chat.id, message.text):
-            bot.send_message(message.chat.id, 'Vetoed ' + message.text)
+            bot.send_message(message.chat.id, 'Vetoed ' + message.text, reply_markup=markup)
         else:
-            bot.send_message(message.chat.id, 'Something went wrong. No changes were made.')
+            bot.send_message(message.chat.id, 'Something went wrong. No changes were made.', \
+                reply_markup=markup)
     else:
         if message.chat.id in mem.user_choices:
             for key, value in mem.user_choices[message.chat.id].items():
