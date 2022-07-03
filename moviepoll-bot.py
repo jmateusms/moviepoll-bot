@@ -401,6 +401,8 @@ def poll_complete(pollAnswer):
             return
         user_id = pollAnswer.user.id
         if mem.check_user_vote(chat_id, user_id):
+            mem.remove_vote(chat_id, user_id, pollAnswer.option_ids[0])
+            mem.add_vote(chat_id, user_id, pollAnswer.option_ids[0])
             bot.send_message(chat_id, f'User {username} has voted (again).')
         else:
             mem.add_vote(chat_id, user_id, pollAnswer.option_ids[0])

@@ -133,7 +133,7 @@ class sql_mem:
                         "(unique_id TEXT PRIMARY KEY, user_id INT, chat_id INT, username TEXT, "\
                             "tt TEXT, url TEXT, title TEXT)")
         self.cursor.execute("CREATE TABLE IF NOT EXISTS users_voted "\
-                    "(chat_id INT PRIMARY KEY, user_id INT)")
+                    "(chat_id INT PRIMARY KEY, user_id INT, option_id INT)")
         self.cursor.execute("CREATE TABLE IF NOT EXISTS polls "\
                     "(chat_id INT PRIMARY KEY, poll_id INT, poll_active BOOLEAN)")
         self.cursor.execute("CREATE TABLE IF NOT EXISTS poll_counts "\
@@ -218,15 +218,25 @@ class sql_mem:
         '''
         unique_titles = [get_unique_id(chat_id, i) for i in range(len(titles))]
         
-        self.cursor.execute(
-            f"REPLACE INTO polls (chat_id, poll_id, poll_active)"\
-            f"VALUES ({chat_id}, {poll_id}, TRUE)")
+        self.cursor.execute(f"SELECT * FROM polls WHERE chat_id = {chat_id}")
+        if self.cursor.rowcount > 0:
+            self.cursor.execute(
+                f"UPDATE polls SET poll_id = {poll_id}, poll_active = True"\
+                    f"WHERE chat_id = {chat_id}")
+        else:
+            self.cursor.execute(
+                f"INSERT INTO polls (chat_id, poll_id, poll_active) "\
+                    f"VALUES ({chat_id}, {poll_id}, True)")
         
         for i in range(len(titles)):
             self.cursor.execute(
-                "REPLACE INTO poll_counts "\
-                    "(unique_title, chat_id, poll_id, option_id, title, count)"\
-                f"VALUES ('{unique_titles[i]}', {chat_id}, {poll_id}, '{i}', '{titles[i]}', 0)")
+                f"SELECT * FROM poll_counts WHERE unique_title = '{unique_titles[i]}'")
+            if self.cursor.rowcount > 0: # unique_title chat_id poll_id option_id title count
+                self.cursor.execute(
+                    f"DELETE FROM poll_counts WHERE chat_id = {chat_id}")
+            self.cursor.execute(
+                f"INSERT INTO poll_counts (unique_title, chat_id, poll_id, option_id, title, count) "\
+                f"VALUES ('{unique_titles[i]}', {chat_id}, {poll_id}, {i}, '{titles[i]}', 0)")
         
         self.connection.commit()
     
@@ -248,11 +258,35 @@ class sql_mem:
         unique_title = get_unique_id(chat_id, option_id)
 
         self.cursor.execute(
-            f"REPLACE INTO users_voted (chat_id, user_id) VALUES ({chat_id}, {user_id})")
+            f"SELECT * FROM users_voted WHERE user_id = {user_id} AND chat_id = {chat_id}")
+        if self.cursor.rowcount > 0:
+            self.cursor.execute(
+                f"UPDATE users_voted SET option_id = {option_id} "\
+                f"WHERE user_id = {user_id} AND chat_id = {chat_id}")
+        else:
+            self.cursor.execute(
+                f"INSERT INTO users_voted (user_id, chat_id, option_id) "\
+                f"VALUES ({user_id}, {chat_id}, {option_id})")
         self.cursor.execute(
             f"UPDATE poll_counts SET count = count + 1 WHERE unique_title = '{unique_title}'")
         
         self.connection.commit()
+    
+    def remove_vote(self, chat_id, user_id, option_id):
+        '''
+        Recount vote for that user. If option_id differs from existing vote, delete old vote.
+        '''
+        unique_title = get_unique_id(chat_id, option_id)
+        
+        self.cursor.execute(
+            f"SELECT option_id FROM users_voted WHERE user_id = {user_id} AND chat_id = {chat_id}")
+        if self.cursor.rowcount > 0:
+            old_option_id = self.cursor.fetchone()[0]
+            if old_option_id != option_id:
+                self.cursor.execute(
+                    f"DELETE FROM users_voted WHERE user_id = {user_id} AND chat_id = {chat_id}")
+                self.cursor.execute(
+                    f"UPDATE poll_counts SET count = count - 1 WHERE unique_title = '{unique_title}'")
         
     def check_user_vote(self, chat_id, user_id):
         '''
