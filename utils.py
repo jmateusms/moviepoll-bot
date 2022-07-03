@@ -416,12 +416,12 @@ class sql_mem:
         '''
         Reset database.
         '''
-        self.cursor.execute("DELETE FROM user_choices")
-        self.cursor.execute("DELETE FROM users_voted")
-        self.cursor.execute("DELETE FROM polls")
-        self.cursor.execute("DELETE FROM poll_counts")
-        self.cursor.execute("DELETE FROM enable_results")
-        self.cursor.execute("DELETE FROM results")
+        self.cursor.execute("DELETE FROM user_choices;")
+        self.cursor.execute("DELETE FROM users_voted;")
+        self.cursor.execute("DELETE FROM polls;")
+        self.cursor.execute("DELETE FROM poll_counts;")
+        self.cursor.execute("DELETE FROM enable_results;")
+        self.cursor.execute("DELETE FROM results;")
         self.connection.commit()
 
         self.initialize_database()
