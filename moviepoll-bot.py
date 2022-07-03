@@ -57,7 +57,7 @@ These are the available commands:
 ''')
 
 @bot.message_handler(commands=['choose'])
-def choice(message, ignore_size=False):
+def choose(message, ignore_size=False):
     chat_id = message.chat.id
     user_id = message.from_user.id
     if ignore_size:
@@ -68,9 +68,10 @@ def choice(message, ignore_size=False):
             markup = telebot.types.ForceReply(selective=False)
             get_reply = bot.send_message(chat_id, "Please, enter a choice:", \
                 reply_markup=markup, reply_to_message_id=message.message_id)
-            bot.register_next_step_handler(get_reply, choice, True)
+            bot.register_next_step_handler(get_reply, choose, True)
             return
-        else: user_input = user_input[1]
+        else:
+            user_input = user_input[1]
     tt = get_tt(user_input)
     if tt is not None:
         try:
@@ -99,7 +100,7 @@ def choice(message, ignore_size=False):
             message.chat.id, "No valid IMDb url or tt tag detected.", reply_markup=markup)
 
 @bot.message_handler(commands=['choosedummy'])
-def dummychoice(message): # TODO: update to use sql
+def choosedummy(message): # TODO: update to use sql
     if message.from_user.id in [OWNER_ID]:
         tt = 'tt0068646'
         url = imdb_url(tt)
