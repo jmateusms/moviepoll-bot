@@ -156,7 +156,7 @@ class sql_mem:
             self.cursor.execute(
                 f"UPDATE user_choices "\
                 f"SET user_id = {user_id}, chat_id = {chat_id}, username = '{username}', "\
-                    f"choice = '{tt}', url = '{url}', title = '{title}' "\
+                    f"tt = '{tt}', url = '{url}', title = '{title}' "\
                 f"WHERE unique_id = '{unique_id}'")
         else:
             self.cursor.execute(
