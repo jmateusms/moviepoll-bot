@@ -221,12 +221,12 @@ class sql_mem:
         self.cursor.execute(f"SELECT * FROM polls WHERE chat_id = {chat_id}")
         if self.cursor.rowcount > 0:
             self.cursor.execute(
-                f"UPDATE polls SET poll_id = {poll_id}, poll_active = True"\
+                f"UPDATE polls SET poll_id = {poll_id}, poll_active = TRUE"\
                     f"WHERE chat_id = {chat_id}")
         else:
             self.cursor.execute(
                 f"INSERT INTO polls (chat_id, poll_id, poll_active) "\
-                    f"VALUES ({chat_id}, {poll_id}, True)")
+                    f"VALUES ({chat_id}, {poll_id}, TRUE)")
         
         for i in range(len(titles)):
             self.cursor.execute(
