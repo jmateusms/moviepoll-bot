@@ -396,6 +396,8 @@ def poll_complete(pollAnswer):
     except:
         username = pollAnswer.from_user.first_name
     if sql:
+        print(dir(pollAnswer))
+        print(pollAnswer)
         chat_id = pollAnswer.chat.id
         if chat_id is None:
             return
