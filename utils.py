@@ -221,12 +221,12 @@ class sql_mem:
         self.cursor.execute(f"SELECT * FROM polls WHERE chat_id = {chat_id}")
         if self.cursor.rowcount > 0:
             self.cursor.execute(
-                f"UPDATE polls SET poll_id = {poll_id}, poll_active = TRUE"\
+                f"UPDATE polls SET poll_id = {poll_id}, poll_active = 'TRUE'"\
                     f"WHERE chat_id = {chat_id}")
         else:
             self.cursor.execute(
                 f"INSERT INTO polls (chat_id, poll_id, poll_active) "\
-                    f"VALUES ({chat_id}, {poll_id}, TRUE)")
+                    f"VALUES ({chat_id}, {poll_id}, 'TRUE')")
         
         for i in range(len(titles)):
             self.cursor.execute(
@@ -245,7 +245,7 @@ class sql_mem:
         Check if poll exists. Returns chat_id if exists, None otherwise.
         '''
         self.cursor.execute(
-            f"SELECT chat_id FROM polls WHERE poll_id = {poll_id} AND poll_active = TRUE")
+            f"SELECT chat_id FROM polls WHERE poll_id = {poll_id} AND poll_active = 'TRUE'")
         try:
             return self.cursor.fetchone()[0]
         except:
@@ -364,7 +364,7 @@ class sql_mem:
         Disable poll and delete all choices, users_voted and poll_counts.
         '''
         self.cursor.execute(
-            f"UPDATE polls SET poll_active = FALSE WHERE chat_id = {chat_id}")
+            f"UPDATE polls SET poll_active = 'FALSE' WHERE chat_id = {chat_id}")
         self.cursor.execute(
             f"DELETE FROM user_choices WHERE chat_id = {chat_id}")
         self.cursor.execute(
