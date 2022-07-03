@@ -138,10 +138,10 @@ class sql_mem:
             "(chat_id INT PRIMARY KEY, user_id INT, option_id INT);")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS polls "\
-            "(chat_id INT PRIMARY KEY, poll_id INT, poll_active BOOLEAN);")
+            "(chat_id INT PRIMARY KEY, poll_id TEXT, poll_active BOOLEAN);")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS poll_counts "\
-            "(unique_title TEXT PRIMARY KEY, chat_id INT, poll_id INT, "\
+            "(unique_title TEXT PRIMARY KEY, chat_id INT, poll_id TEXT, "\
                 "option_id INT, title TEXT, count INT);")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS enable_results "\
