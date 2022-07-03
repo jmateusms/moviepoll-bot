@@ -3,6 +3,8 @@ import re
 import bs4
 import requests
 import pickle
+import psycopg2
+from urllib.parse import urlparse
 from collections import defaultdict
 
 # list of exclamations
@@ -25,6 +27,15 @@ reroll_exclamations = [
     "We get the warhead and we hold the world ransom for... One million rerolls.",
     "Very nice! Great reroll!",
     "I'm about to do to you what Limp Bizkit did to music in the late '90s."
+]
+vote_lines = [
+    "The choice is an illusion. You already know what you have to do.",
+    "Gods don't have to choose. We take.", "The hardest choices require the strongest wills.",
+    "We must face the choice between what is right and what is easy.",
+    "You always have a choice. You just happen to make the wrong f***ing one.",
+    "We are who we choose to be. Now choose!", "I am made of bourbon and poor choices.",
+    "Killing is making a choice.", "We don't choose the things we believe in, they choose us.",
+    "Choice is an illusion, created between those with power and those without."
 ]
 
 # functions
@@ -78,13 +89,300 @@ def imdb_url(tt):
     else:
         return None
 
-# classes
-class memo:
+def get_unique_id(chat_id, user_id):
     '''
-    Bot "memory"
+    Get unique id from chat_id and user_id
+    '''
+    return f"{chat_id}_{user_id}"
+
+class sql_mem:
+    '''
+    Bot "memory". Synced to SQL database.
+    '''
+
+    def __init__(self, DATABASE_URL):
+        self.DATABASE_URL = DATABASE_URL
+        self.get_database_connection()
+        self.initialize_database()
+
+    def get_database_connection(self):
+        '''
+        Get database connection.
+        '''
+        result = urlparse(self.DATABASE_URL)
+        username = result.username
+        password = result.password
+        database = result.path[1:]
+        hostname = result.hostname
+        port = result.port
+
+        username, password, database, hostname, port = get_database_credentials(DATABASE_URL)
+        
+        self.connection = psycopg2.connect(
+            database = database,
+            user = username,
+            password = password,
+            host = hostname,
+            port = port
+        )
+        self.cursor = self.connection.cursor()
+
+    def initialize_database(self):
+        '''
+        Create tables for the bot in the database.
+        '''
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS user_choices '\
+                        '(unique_id TEXT PRIMARY KEY, user_id INT, chat_id INT, username TEXT, '\
+                            'tt TEXT, url TEXT, title TEXT)')
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS users_voted '\
+                    '(chat_id INT PRIMARY KEY, user_id INT)')
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS polls '\
+                    '(chat_id INT PRIMARY KEY, poll_id INT, poll_active BOOLEAN)')
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS poll_counts '\
+                    '(unique_title TEXT PRIMARY KEY, chat_id INT, poll_id INT, '\
+                        'option_id INT, title TEXT, count INT)')
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS enable_results '\
+                            '(chat_id INT PRIMARY KEY, enable_results BOOLEAN)')
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS results '\
+                    '(unique_tt TEXT PRIMARY KEY, chat_id INT, '\
+                        'tt TEXT, url TEXT, title TEXT, type TEXT, date DATE)')
+        self.connection.commit()
+    
+    def add_choice(self, unique_id, user_id, chat_id, username, tt, url, title):
+        '''
+        Add choice to memory.
+        '''
+        self.cursor.execute(
+                f'SELECT * FROM user_choices WHERE unique_id = "{unique_id}"')
+        if self.cursor.rowcount > 0:
+            self.cursor.execute(
+                f'UPDATE user_choices'\
+                f'SET user_id = "{user_id}", chat_id = "{chat_id}", username = "{username}",'\
+                    f'choice = "{tt}", url = "{url}", title = "{title}"'\
+                f'WHERE unique_id = "{unique_id}"')
+        else:
+            self.cursor.execute(
+                f'INSERT INTO user_choices'\
+                f'(unique_id, user_id, chat_id, username, tt, url, title)'\
+                f'VALUES ("{unique_id}", "{user_id}", "{chat_id}", "{username}", '\
+                    f'"{tt}", "{url}", "{title}")')
+        self.connection.commit()
+    
+    def delete_choice(self, unique_id):
+        '''
+        Delete choice from memory. Returns True if successful, False otherwise.
+        '''
+        self.cursor.execute(
+                f'DELETE FROM user_choices WHERE unique_id = "{unique_id}"')
+        self.connection.commit()
+        if self.cursor.rowcount > 0:
+            return True
+        else:
+            return False
+    
+    def delete_by_title(self, chat_id, title):
+        '''
+        Delete choice from memory. Returns True if successful, False otherwise.
+        '''
+        self.cursor.execute(
+                f'DELETE FROM user_choices WHERE chat_id = "{chat_id}" AND title = "{title}"')
+        self.connection.commit()
+        if self.cursor.rowcount > 0:
+            return True
+        else:
+            return False
+    
+    def delete_all_choices(self, chat_id):
+        '''
+        Delete all choices from memory. Returns True if successful, False otherwise.
+        '''
+        self.cursor.execute('DELETE FROM user_choices WHERE chat_id = "{chat_id}"')
+        self.connection.commit()
+        if self.cursor.rowcount > 0:
+            return True
+        else:
+            return False
+    
+    def get_choices(self, chat_id):
+        '''
+        Get choices for a chat.
+        '''
+        self.cursor.execute(
+            f'SELECT * FROM user_choices WHERE chat_id = "{chat_id}"')
+        try:
+            return self.cursor.fetchall()
+        except:
+            return None
+    
+    def add_poll(self, chat_id, poll_id, titles):
+        '''
+        Add poll to memory.
+        '''
+        unique_titles = [get_unique_id(chat_id, i) for i in range(len(titles))]
+        
+        self.cursor.execute(
+            f'REPLACE INTO polls (chat_id, poll_id, poll_active)'\
+            f'VALUES ("{chat_id}", "{poll_id}", TRUE)')
+        
+        for i in range(len(titles)):
+            self.cursor.execute(
+                'REPLACE INTO poll_counts '\
+                    '(unique_title, chat_id, poll_id, option_id, title, count)'\
+                f'VALUES ("{unique_titles[i]}", "{chat_id}", "{poll_id}", "{i}", "{titles[i]}", 0)')
+        
+        self.connection.commit()
+    
+    def get_chat_from_poll(self, poll_id):
+        '''
+        Check if poll exists. Returns chat_id if exists, None otherwise.
+        '''
+        self.cursor.execute(
+            f'SELECT chat_id FROM polls WHERE poll_id = "{poll_id}" AND poll_active = TRUE')
+        try:
+            return self.cursor.fetchone()[0]
+        except:
+            return None
+    
+    def add_vote(self, chat_id, user_id, option_id):
+        '''
+        Register vote. Save user to users_voted and choice to poll_counts.
+        '''
+        unique_title = get_unique_id(chat_id, option_id)
+
+        self.cursor.execute(
+            f'REPLACE INTO users_voted (chat_id, user_id) VALUES ("{chat_id}", "{user_id}")')
+        self.cursor.execute(
+            f'UPDATE poll_counts SET count = count + 1 WHERE unique_title = "{unique_title}"')
+        
+        self.connection.commit()
+        
+    def check_user_vote(self, chat_id, user_id):
+        '''
+        Check if user has voted.
+        '''
+        self.cursor.execute(
+            f'SELECT * FROM users_voted WHERE chat_id = "{chat_id}" AND user_id = "{user_id}"')
+        if self.cursor.rowcount > 0:
+            return True
+        else:
+            return False
+    
+    def check_poll_complete(self, chat_id):
+        '''
+        Check if poll is complete.
+        If all users in user_choices are present in users_voted, return True. False otherwise.
+        '''
+        self.cursor.execute(f'SELECT user_id FROM users_voted WHERE chat_id = "{chat_id}"')
+        users_voted = self.cursor.fetchall()
+        self.cursor.execute(f'SELECT user_id FROM user_choices WHERE chat_id = "{chat_id}"')
+        users_choices = self.cursor.fetchall()
+        # check if all users in user_choices are present in users_voted
+        for user in users_choices:
+            if user not in users_voted:
+                return False
+        return True
+    
+    def get_poll_winner(self, chat_id):
+        '''
+        Check which option has the most votes.
+        Return movie title if there is a single winner.
+        If there is a tie, return None.
+        '''
+        self.cursor.execute(
+            f'SELECT option_id, count, title FROM poll_counts WHERE chat_id = "{chat_id}"')
+        
+        counts = self.cursor.fetchall()
+        max_votes = max([i[1] for i in counts])
+        winners = [i[2] for i in counts if i[1] == max_votes]
+        
+        if len(winners) > 1:
+            return None
+        else:
+            return winners[0]
+    
+    def random_poll_winner(self, chat_id, reroll_chance=None):
+        '''
+        If there is a tie, randomly select a winner.
+        Returns a reroll_chance and winner movie title.
+        Returns None if there is a reroll.
+        '''
+        self.cursor.execute(
+            f'SELECT option_id, count, title FROM poll_counts WHERE chat_id = "{chat_id}"')
+        
+        counts = self.cursor.fetchall()
+        max_votes = max([i[1] for i in counts])
+        winners = [i[2] for i in counts if i[1] == max_votes]
+        
+        if len(winners) > 1:
+            if reroll_chance is None:
+                reroll_slots = list(range(1, len(winners) + 1))
+            else:
+                reroll_slots = int(len(winners) * reroll_chance / (1 - reroll_chance))
+            choices = winners + [None] * reroll_slots
+            winner = random.choice(choices)
+        elif len(winners) == 1:
+            winner = winners[0]
+        else:
+            return None
+        
+        return reroll_chance, winner
+    
+    def end_poll(self, chat_id):
+        '''
+        Disable poll and delete all choices, users_voted and poll_counts.
+        '''
+        self.cursor.execute(
+            f'UPDATE polls SET poll_active = FALSE WHERE chat_id = "{chat_id}"')
+        self.cursor.execute(
+            f'DELETE FROM user_choices WHERE chat_id = "{chat_id}"')
+        self.cursor.execute(
+            f'DELETE FROM users_voted WHERE chat_id = "{chat_id}"')
+        self.cursor.execute(
+            f'DELETE FROM poll_counts WHERE chat_id = "{chat_id}"')
+        
+        self.connection.commit()
+    
+    def random_winner(self, chat_id, reroll_chance=None):
+        '''
+        Randomly select a winner from current choices.
+        '''
+        self.cursor.execute(
+            f'SELECT option_id, title FROM user_choices WHERE chat_id = "{chat_id}"')
+        choices = self.cursor.fetchall()
+        
+        if len(choices) == 0:
+            return None
+
+        if reroll_chance is None:
+            reroll_slots = list(range(1, len(choices) + 1))
+        else:
+            reroll_slots = int(len(choices) * reroll_chance / (1 - reroll_chance))
+        
+        choices = choices + [None] * reroll_slots
+        winner = random.choice(choices)
+        
+        return reroll_chance, winner
+
+    def reset_database(self):
+        '''
+        Reset database.
+        '''
+        self.cursor.execute('DELETE FROM user_choices')
+        self.cursor.execute('DELETE FROM users_voted')
+        self.cursor.execute('DELETE FROM polls')
+        self.cursor.execute('DELETE FROM poll_counts')
+        self.cursor.execute('DELETE FROM enable_results')
+        self.cursor.execute('DELETE FROM results')
+        self.connection.commit()
+
+        self.initialize_database()
+
+# classes
+class local_mem:
+    '''
+    Bot "memory". Synced to local files.
     '''
     def __init__(self):
-
         self.load_mem()
     
     def create_mem(self):
