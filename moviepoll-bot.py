@@ -398,6 +398,9 @@ def poll_complete(pollAnswer):
     if sql:
         print(dir(pollAnswer))
         print(pollAnswer)
+        os.system(f'echo "{pollAnswer.option_ids[0]}"')
+        os.system(f'echo "{pollAnswer}"')
+        os.system(f'echo "{dir(pollAnswer)}"')
         chat_id = pollAnswer.chat.id
         if chat_id is None:
             return
