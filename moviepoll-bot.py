@@ -75,9 +75,11 @@ def choose(message, ignore_size=False):
     tt = get_tt(user_input)
     if tt is not None:
         try:
-            username = message.from_user.username
+            username = pollAnswer.user.username
+            if username is None:
+                username = pollAnswer.user.first_name
         except:
-            username = message.from_user.first_name
+            username = pollAnswer.user.first_name
         url = imdb_url(tt)
         title = get_title(get_soup(getHTML(url)))
         if sql:
@@ -120,9 +122,11 @@ def participate(message):
     chat_id = message.chat.id
     user_id = message.from_user.id
     try:
-        username = message.from_user.username
+        username = pollAnswer.user.username
+        if username is None:
+            username = pollAnswer.user.first_name
     except:
-        username = message.from_user.first_name
+        username = pollAnswer.user.first_name
     if sql:
         unique_id = get_unique_id(chat_id, user_id)
         mem.add_choice(unique_id, user_id, chat_id, username, None, None, None)
@@ -213,9 +217,11 @@ def clear_choice(message):
     if sql:
         unique_id = get_unique_id(message.chat.id, message.from_user.id)
         try:
-            username = message.from_user.username
+            username = pollAnswer.user.username
+            if username is None:
+                username = pollAnswer.user.first_name
         except:
-            username = message.from_user.first_name
+            username = pollAnswer.user.first_name
         if mem.delete_choice(unique_id):
             bot.send_message(message.chat.id, 'Cleared choice for user 'f'{username}')
         else:
@@ -397,6 +403,8 @@ def fakepoll(message):
 def poll_complete(pollAnswer):
     try:
         username = pollAnswer.user.username
+        if username is None:
+            username = pollAnswer.user.first_name
     except:
         username = pollAnswer.user.first_name
     if sql:
