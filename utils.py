@@ -244,9 +244,9 @@ class sql_mem:
                     (chat_id, unique_titles[i]))
             self.cursor.execute(
                 """INSERT INTO poll_counts
-                (unique_title, chat_id, poll_id, option_id, title)
-                values (%s, %s, %s, %s, %s);""",
-                (unique_titles[i], chat_id, poll_id, i, titles[i]))
+                (unique_title, chat_id, poll_id, option_id, title, count)
+                values (%s, %s, %s, %s, %s, %s);""",
+                (unique_titles[i], chat_id, poll_id, i, titles[i], 0))
         
         self.connection.commit()
     
