@@ -167,7 +167,7 @@ class sql_mem:
             self.cursor.execute(
                 """INSERT INTO user_choices
                 (unique_id, user_id, chat_id, username, tt, url, title)
-                values (%s, %s, %s, %s, %s, %s, %s);""",
+                VALUES (%s, %s, %s, %s, %s, %s, %s);""",
                 (unique_id, user_id, chat_id, username, tt, url, title))
         self.connection.commit()
     
@@ -233,7 +233,7 @@ class sql_mem:
             self.cursor.execute(
                 """INSERT INTO polls
                 (chat_id, poll_id, poll_active)
-                values (%s, %s, %s);""", (chat_id, poll_id, True))
+                VALUES (%s, %s, %s);""", (chat_id, poll_id, True))
         
         for i in range(len(titles)):
             self.cursor.execute(
@@ -245,7 +245,7 @@ class sql_mem:
             self.cursor.execute(
                 """INSERT INTO poll_counts
                 (unique_title, chat_id, poll_id, option_id, title, count)
-                values (%s, %s, %s, %s, %s, %s);""",
+                VALUES (%s, %s, %s, %s, %s, %s);""",
                 (unique_titles[i], chat_id, poll_id, i, titles[i], 0))
         
         self.connection.commit()
@@ -278,7 +278,7 @@ class sql_mem:
             self.cursor.execute(
                 """INSERT INTO users_voted
                 (user_id, chat_id, option_id)
-                values (%s, %s, %s);""", (user_id, chat_id, option_id))
+                VALUES (%s, %s, %s);""", (user_id, chat_id, option_id))
         self.cursor.execute(
             "UPDATE poll_counts SET count = count + 1 WHERE unique_title = %s;", (unique_title,))
         
