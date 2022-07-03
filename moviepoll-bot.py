@@ -352,7 +352,7 @@ def poll(message):
                         message.chat.id, f'{row[6]}: {row[5]}', disable_notification=True)
             poll = bot.send_poll(message.chat.id, random.choice(vote_lines),
                 films, is_anonymous=False)
-            mem.add_poll(message.chat.id, poll.poll.id, films)
+            mem.add_poll(message.chat.id, poll.id, films)
             bot.send_message(message.chat.id, 'Poll created.')
     else:
         if len(mem.user_choices[message.chat.id]) > 1:
@@ -381,7 +381,7 @@ def fakepoll(message):
         if sql:
             poll = bot.send_poll(message.chat.id, random.choice(vote_lines),
                 ['The Godfather', 'Forrest Gump', 'The Shawshank Redemption'], is_anonymous=False)
-            mem.add_poll(message.chat.id, poll.poll.id)
+            mem.add_poll(message.chat.id, poll.id)
         else:
             mem.last_poll[message.chat.id] = bot.send_poll(
                 message.chat.id, 'Choose', ['The Godfather', 'Forrest Gump'], is_anonymous=False)
