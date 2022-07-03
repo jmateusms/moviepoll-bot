@@ -396,11 +396,11 @@ def fakepoll(message):
 @bot.poll_answer_handler()
 def poll_complete(pollAnswer):
     try:
-        username = pollAnswer.from_user.username
+        username = pollAnswer.user.username
     except:
-        username = pollAnswer.from_user.first_name
+        username = pollAnswer.user.first_name
     if sql:
-        chat_id = mem.get_chat_from_poll(pollAnswer.poll.id)
+        chat_id = mem.get_chat_from_poll(pollAnswer.poll_id)
         if chat_id is None:
             return
         user_id = pollAnswer.user.id
