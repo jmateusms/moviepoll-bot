@@ -129,21 +129,21 @@ class sql_mem:
         '''
         Create tables for the bot in the database.
         '''
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS user_choices '\
-                        '(unique_id TEXT PRIMARY KEY, user_id INT, chat_id INT, username TEXT, '\
-                            'tt TEXT, url TEXT, title TEXT)')
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS users_voted '\
-                    '(chat_id INT PRIMARY KEY, user_id INT)')
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS polls '\
-                    '(chat_id INT PRIMARY KEY, poll_id INT, poll_active BOOLEAN)')
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS poll_counts '\
-                    '(unique_title TEXT PRIMARY KEY, chat_id INT, poll_id INT, '\
-                        'option_id INT, title TEXT, count INT)')
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS enable_results '\
-                            '(chat_id INT PRIMARY KEY, enable_results BOOLEAN)')
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS results '\
-                    '(unique_tt TEXT PRIMARY KEY, chat_id INT, '\
-                        'tt TEXT, url TEXT, title TEXT, type TEXT, date DATE)')
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS user_choices "\
+                        "(unique_id TEXT PRIMARY KEY, user_id INT, chat_id INT, username TEXT, "\
+                            "tt TEXT, url TEXT, title TEXT)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS users_voted "\
+                    "(chat_id INT PRIMARY KEY, user_id INT)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS polls "\
+                    "(chat_id INT PRIMARY KEY, poll_id INT, poll_active BOOLEAN)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS poll_counts "\
+                    "(unique_title TEXT PRIMARY KEY, chat_id INT, poll_id INT, "\
+                        "option_id INT, title TEXT, count INT)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS enable_results "\
+                            "(chat_id INT PRIMARY KEY, enable_results BOOLEAN)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS results "\
+                    "(unique_tt TEXT PRIMARY KEY, chat_id INT, "\
+                        "tt TEXT, url TEXT, title TEXT, type TEXT, date DATE)")
         self.connection.commit()
     
     def add_choice(self, unique_id, user_id, chat_id, username, tt, url, title):
@@ -151,19 +151,19 @@ class sql_mem:
         Add choice to memory.
         '''
         self.cursor.execute(
-                f'SELECT * FROM user_choices WHERE unique_id = "{unique_id}"')
+                f"SELECT * FROM user_choices WHERE unique_id = '{unique_id}'")
         if self.cursor.rowcount > 0:
             self.cursor.execute(
-                f'UPDATE user_choices'\
-                f'SET user_id = {user_id}, chat_id = {chat_id}, username = "{username}",'\
-                    f'choice = "{tt}", url = "{url}", title = "{title}"'\
-                f'WHERE unique_id = "{unique_id}"')
+                f"UPDATE user_choices"\
+                f"SET user_id = {user_id}, chat_id = {chat_id}, username = '{username}',"\
+                    f"choice = '{tt}', url = '{url}', title = '{title}'"\
+                f"WHERE unique_id = '{unique_id}'")
         else:
             self.cursor.execute(
-                f'INSERT INTO user_choices'\
-                f'(unique_id, user_id, chat_id, username, tt, url, title)'\
-                f'VALUES ("{unique_id}", {user_id}, {chat_id}, "{username}", '\
-                    f'"{tt}", "{url}", "{title}")')
+                f"INSERT INTO user_choices"\
+                f"(unique_id, user_id, chat_id, username, tt, url, title)"\
+                f"VALUES ('{unique_id}', {user_id}, {chat_id}, '{username}', "\
+                    f"'{tt}', '{url}', '{title}')")
         self.connection.commit()
     
     def delete_choice(self, unique_id):
