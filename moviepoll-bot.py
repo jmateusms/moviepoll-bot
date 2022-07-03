@@ -74,13 +74,16 @@ def choose(message, ignore_size=False):
             user_input = user_input[1]
     tt = get_tt(user_input)
     if tt is not None:
+        print('step 1')
         try:
             username = message.from_user.username
         except:
             username = message.from_user.first_name
         url = imdb_url(tt)
         title = get_title(get_soup(getHTML(url)))
+        print('step 2')
         if sql:
+            print('step 3')
             unique_id = get_unique_id(chat_id, user_id)
             mem.add_choice(unique_id, user_id, chat_id, username, tt, url, title)
         else:
