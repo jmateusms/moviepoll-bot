@@ -400,6 +400,8 @@ def poll_complete(pollAnswer):
         if chat_id is None:
             return
         user_id = pollAnswer.user.id
+        print(pollAnswer)
+        bot.send_message(chat_id, pollAnswer.option_ids[0])
         if mem.check_user_vote(chat_id, user_id):
             mem.remove_vote(chat_id, user_id, pollAnswer.option_ids[0])
             mem.add_vote(chat_id, user_id, pollAnswer.option_ids[0])
