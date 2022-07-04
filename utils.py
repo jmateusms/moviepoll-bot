@@ -379,7 +379,7 @@ class sql_mem:
                 reroll_slots = int(len(winners) * reroll_chance / (1 - reroll_chance))
             
             choices = winners + [None] * reroll_slots
-            reroll_chance = reroll_slots / len(choices)
+            reroll_chance = 100 * reroll_slots / len(choices)
 
             winner = random.choice(choices)
         
