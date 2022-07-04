@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 import telebot
 from telebot import types
-# from flask import Flask, request
+from flask import Flask, request
 import random
 from utils import *
 
@@ -12,6 +12,7 @@ load_dotenv()
 TOKEN = os.getenv('TOKEN')
 OWNER_ID = int(os.getenv('OWNER_ID'))
 DATABASE_URL = os.getenv('DATABASE_URL')
+APP_URL = os.getenv('APP_URL')
 
 # try creating database connection, or fallback to local memory
 try:
@@ -26,17 +27,17 @@ except Exception as e:
 # create bot
 bot = telebot.TeleBot(TOKEN)
 
-# server = Flask(__name__)
+server = Flask(__name__)
 
-# bot.remove_webhook()
-# bot.set_webhook(url='https://moviepoll-bot.herokuapp.com/' + TOKEN)
+bot.remove_webhook()
+bot.set_webhook(url=APP_URL + TOKEN)
 
-# @server.route('/' + TOKEN, methods=['POST'])
-# def webhook():
-#     json_string = request.stream.read().decode('utf-8')
-#     update = telebot.types.Update.de_json(json_string)
-#     bot.process_new_updates([update])
-#     return "!", 200
+@server.route('/' + TOKEN, methods=['POST'])
+def webhook():
+    json_string = request.stream.read().decode('utf-8')
+    update = telebot.types.Update.de_json(json_string)
+    bot.process_new_updates([update])
+    return "!", 200
 
 @bot.message_handler(commands=['start', 'help'])
 def start(message):
@@ -529,5 +530,4 @@ def random_choice(message):
             bot.send_message(message.chat.id, 'You need to have at least two options to choose from.')
 
 if __name__ == "__main__":
-    bot.polling(non_stop=True)
-    # server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
+    server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
