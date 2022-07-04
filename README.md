@@ -10,14 +10,15 @@ If you prefer, just run your own instance of the bot, by following the instructi
 
 ### Environment variables
 
-In order to run the bot, you need to define the variables `TOKEN` and `OWNER_ID`. These can be added to an .env file in the root directory of the project.
+In order to run the bot, you need to define the variables `TOKEN` and `OWNER_ID` as well as either `USE_POLLING` or `APP_URL`. Also, `DATABASE_URL` is an optional variable. These can be added to an .env file in the root directory of the project.
 
 - To get a `TOKEN`, you can use the [Telegram Botfather](https://telegram.me/botfather) to create your bot.
 - Your `OWNER_ID` can be found by:
   - Creating an environment variable `OWNER_NAME`, which is your first name, as in Telegram.
   - Running `get_user_id.py` and sending the command `/userid` to your bot.
-- You can also set a `DATABASE_URL` to use a SQL database as bot memory.
-- If you host your instance at a service like Heroku, you can set `APP_URL`.
+- You can also set a `DATABASE_URL` to use a SQL database as bot memory. If this is not provided, the bot will sync to local files in disk.
+- If you host your instance at a service like Heroku, you can set `APP_URL` to user webhooks. This will allow the app to be put to sleep after no interactions are made with the bot.
+- If you want to use the bot in polling mode, set `USE_POLLING` to `yes`.
 
 ### Dependencies
 
@@ -61,5 +62,3 @@ The `/choices` command shows what each user has suggested. The `/poll` command  
 
 - Convert dummy debug commands to use SQL database.
 - Add inline functionality to search for movies in IMDb.
-- Allow easily switching between flask webhook or polling.
-- Use webhooks locally? (check whether possible)
