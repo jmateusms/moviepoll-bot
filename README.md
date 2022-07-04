@@ -16,6 +16,8 @@ In order to run the bot, you need to define the variables `TOKEN` and `OWNER_ID`
 - Your `OWNER_ID` can be found by:
   - Creating an environment variable `OWNER_NAME`, which is your first name, as in Telegram.
   - Running `get_user_id.py` and sending the command `/userid` to your bot.
+- You can also set a `DATABASE_URL` to use a SQL database as bot memory.
+- If you host your instance at a service like Heroku, you can set `APP_URL`.
 
 ### Dependencies
 
@@ -37,13 +39,12 @@ Each user should suggest a movie for the poll with the command `/choose TAG_or_L
 
 If a user wants to vote but not suggest a movie, the command `/participate` can be used. If a (single) extra movie needs to be added to the poll (not linked to any user), the command `/extra` can be used.
 
-Each user can clear their choice with the `/clear` command. The extra movie can be removed with the `/clearextra` command. The bot owner (defined by `OWNER_ID`) can clear all choices with the `/clearall` command.
+Each user can clear their choice with the `/clear` command. The extra movie can be removed with the `/clearextra` command. It is also possible to clear all choices with the `/clearall` command.
 
 The `/choices` command shows what each user has suggested. The `/poll` command  creates a poll with all choices. The `/random` command chooses a movie at random (with a chance of rerolling, I know it makes little sense, but this is an internal "joke" from my group of friends). If there is a tie in the poll, a random winner is chosen among the tied movies, following the same rules of the `/random` option.
 
 ```plaintext
 /start, /help - show this message
-/hello - say hello
 /choose - suggest a movie for the poll (must be a valid IMDb url or tt tag)
 /participate - participate in the poll without suggesting a movie
 /extra - add an extra movie to the poll (not assigned to a user)
@@ -52,10 +53,13 @@ The `/choices` command shows what each user has suggested. The `/poll` command  
 /random - choose random movie among all choices
 /clear - clear your choice
 /clearextra - clear the extra choice
+/clearall - delete all choices
+/veto - veto one of the current choices
 ```
 
 ## To do
 
-- Fix `/choose` command when no text is given in group chats (ForceReply doesn't choose correct user).
+- Convert dummy debug commands to use SQL database.
 - Add inline functionality to search for movies in IMDb.
-- Add persistent storage for bot memory when deployed in platforms such as Heroku.
+- Allow easily switching between flask webhook or polling.
+- Use webhooks locally? (check whether possible)

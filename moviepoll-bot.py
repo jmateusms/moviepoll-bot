@@ -54,6 +54,7 @@ These are the available commands:
 /random - choose random movie among all choices
 /clear - clear your choice
 /clearextra - clear the extra choice
+/clearall - delete all choices
 /veto - veto one of the current choices
 ''')
 
