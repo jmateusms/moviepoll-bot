@@ -3,11 +3,10 @@ import os
 from dotenv import load_dotenv
 import telebot
 from telebot import types
-# from flask import Flask, request
+from flask import Flask, request
 import random
 from utils import *
 
-# load api token and owner id
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
 OWNER_ID = int(os.getenv('OWNER_ID'))
@@ -17,6 +16,9 @@ if USE_POLLING is not None:
     if USE_POLLING.lower() in ['true', '1', 'yes']:
         USE_POLLING = True
         print('Using polling')
+
+bot = telebot.TeleBot(TOKEN)
+
 if not USE_POLLING:
     print('Using webhooks')
 
@@ -34,7 +36,6 @@ if not USE_POLLING:
         bot.process_new_updates([update])
         return "!", 200
 
-# try creating database connection, or fallback to local memory
 if DATABASE_URL is not None:
     mem = sql_mem(DATABASE_URL)
     sql = True
@@ -43,9 +44,6 @@ else:
     sql = False
     mem = local_mem()
     print('Using local disk database')
-
-# create bot
-bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start', 'help'])
 def start(message):
