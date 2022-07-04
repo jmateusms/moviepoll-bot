@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 import telebot
 from telebot import types
-from flask import Flask, request
+# from flask import Flask, request
 import random
 from utils import *
 
@@ -26,17 +26,17 @@ except Exception as e:
 # create bot
 bot = telebot.TeleBot(TOKEN)
 
-server = Flask(__name__)
+# server = Flask(__name__)
 
-bot.remove_webhook()
-bot.set_webhook(url='https://moviepoll-bot.herokuapp.com/' + TOKEN)
+# bot.remove_webhook()
+# bot.set_webhook(url='https://moviepoll-bot.herokuapp.com/' + TOKEN)
 
-@server.route('/' + TOKEN, methods=['POST'])
-def webhook():
-    json_string = request.stream.read().decode('utf-8')
-    update = telebot.types.Update.de_json(json_string)
-    bot.process_new_updates([update])
-    return "!", 200
+# @server.route('/' + TOKEN, methods=['POST'])
+# def webhook():
+#     json_string = request.stream.read().decode('utf-8')
+#     update = telebot.types.Update.de_json(json_string)
+#     bot.process_new_updates([update])
+#     return "!", 200
 
 @bot.message_handler(commands=['start', 'help'])
 def start(message):
@@ -57,7 +57,7 @@ These are the available commands:
 ''')
 
 @bot.message_handler(commands=['choose'])
-def choice(message, ignore_size=False):
+def choose(message, ignore_size=False):
     chat_id = message.chat.id
     user_id = message.from_user.id
     if ignore_size:
@@ -68,13 +68,16 @@ def choice(message, ignore_size=False):
             markup = telebot.types.ForceReply(selective=False)
             get_reply = bot.send_message(chat_id, "Please, enter a choice:", \
                 reply_markup=markup, reply_to_message_id=message.message_id)
-            bot.register_next_step_handler(get_reply, choice, True)
+            bot.register_next_step_handler(get_reply, choose, True)
             return
-        else: user_input = user_input[1]
+        else:
+            user_input = user_input[1]
     tt = get_tt(user_input)
     if tt is not None:
         try:
             username = message.from_user.username
+            if username is None:
+                username = message.from_user.first_name
         except:
             username = message.from_user.first_name
         url = imdb_url(tt)
@@ -99,7 +102,7 @@ def choice(message, ignore_size=False):
             message.chat.id, "No valid IMDb url or tt tag detected.", reply_markup=markup)
 
 @bot.message_handler(commands=['choosedummy'])
-def dummychoice(message): # TODO: update to use sql
+def choosedummy(message): # TODO: update to use sql
     if message.from_user.id in [OWNER_ID]:
         tt = 'tt0068646'
         url = imdb_url(tt)
@@ -120,6 +123,8 @@ def participate(message):
     user_id = message.from_user.id
     try:
         username = message.from_user.username
+        if username is None:
+            username = message.from_user.first_name
     except:
         username = message.from_user.first_name
     if sql:
@@ -179,14 +184,16 @@ def display_choices(message):
         if rows is None:
             bot.send_message(message.chat.id, "No choices have been made yet.")
         else:
-            
             choices = []
-            for choice in rows:
-                if choice[6] is not None:
-                    choices.append(f'{choice[3]}: {choice[6]}')
+            for row in rows:
+                if row[6] is not None:
+                    choices.append(f'{row[3]}: {row[6]}')
                 else:
-                    choices.append(f'{choice[3]}: no suggestion')
-            bot.send_message(message.chat.id, 'Current participants:\n' + '\n'.join(choices))
+                    choices.append(f'{row[3]}: no suggestion')
+            if len(choices) > 0:
+                bot.send_message(message.chat.id, 'Current participants:\n' + '\n'.join(choices))
+            else:
+                bot.send_message(message.chat.id, "No choices found.")
     else:
         if message.chat.id in mem.user_choices:
             if len(mem.user_choices[message.chat.id]) == 0:
@@ -211,6 +218,8 @@ def clear_choice(message):
         unique_id = get_unique_id(message.chat.id, message.from_user.id)
         try:
             username = message.from_user.username
+            if username is None:
+                username = message.from_user.first_name
         except:
             username = message.from_user.first_name
         if mem.delete_choice(unique_id):
@@ -230,7 +239,7 @@ def clear_choice(message):
 @bot.message_handler(commands=['clearextra'])
 def clear_extra(message):
     if sql:
-        if mem.delete_choice(get_unique_id(chat_id, user_id)):
+        if mem.delete_choice(get_unique_id(message.chat.id, 0)):
             bot.send_message(message.chat.id, 'Extra choice deleted.')
         else:
             bot.send_message(message.chat.id, 'No extra choice found.')
@@ -269,7 +278,8 @@ def veto(message):
             bot.send_message(message.chat.id, "No choices have been made yet.")
         else:
             markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
-            markup.add(*[choice[6] for choice in rows])
+            markup.add(*[row[6] for row in rows if row[6] is not None])
+            markup.add('Cancel')
             get_reply = bot.send_message(
                 message.chat.id, 'Which choice do you want to veto?', reply_markup=markup)
             bot.register_next_step_handler(get_reply, veto_choice)
@@ -321,7 +331,7 @@ def veto_choice(message):
 def clear_memory(message):
     if message.from_user.id in [OWNER_ID]:
         if sql:
-            mem.reset_data()
+            mem.reset_database()
             bot.send_message(message.chat.id, 'Bot memory reinitialized.')
         else:
             mem.create_mem()
@@ -334,9 +344,10 @@ def clear_memory(message):
 def poll(message):
     if sql:
         rows = mem.get_choices(message.chat.id)
+        films = [row[6] for row in rows if row[6] is not None]
         if rows is None:
             bot.send_message(message.chat.id, "No choices have been made yet.")
-        elif len(rows) < 2:
+        elif len(films) < 2:
             bot.send_message(
                 message.chat.id, 'You need to have at least two choices to create a poll.')
         else:
@@ -345,10 +356,10 @@ def poll(message):
                 if row[6] is not None:
                     bot.send_message(
                         message.chat.id, f'{row[6]}: {row[5]}', disable_notification=True)
-            films = [row[6] for row in rows if row[6] is not None]
             poll = bot.send_poll(message.chat.id, random.choice(vote_lines),
                 films, is_anonymous=False)
             mem.add_poll(message.chat.id, poll.poll.id, films)
+            bot.send_message(message.chat.id, 'Poll created.')
     else:
         if len(mem.user_choices[message.chat.id]) > 1:
             bot.send_message(message.chat.id, 'Creating poll... Here are the choices:')
@@ -363,7 +374,7 @@ def poll(message):
                         is_anonymous=False)
             mem.users_voted[message.chat.id] = []
             mem.poll_counts[message.chat.id] = len(mem.user_choices[message.chat.id]) * [0]
-            mem.poll_chats[mem.last_poll[message.chat.id].poll.id] = message.chat.id
+            mem.poll_chats[mem.last_poll[message.chat.id].poll.poll.id] = message.chat.id
             mem.sync_mem()
         else:
             bot.send_message(
@@ -381,7 +392,7 @@ def fakepoll(message):
             mem.last_poll[message.chat.id] = bot.send_poll(
                 message.chat.id, 'Choose', ['The Godfather', 'Forrest Gump'], is_anonymous=False)
             mem.users_voted[message.chat.id] = []
-            mem.poll_chats[mem.last_poll[message.chat.id].poll.id] = message.chat.id
+            mem.poll_chats[mem.last_poll[message.chat.id].poll.poll.id] = message.chat.id
             mem.poll_counts[message.chat.id] = 2 * [0]
             mem.sync_mem()
     else:
@@ -391,16 +402,19 @@ def fakepoll(message):
 @bot.poll_answer_handler()
 def poll_complete(pollAnswer):
     try:
-        username = pollAnswer.from_user.username
+        username = pollAnswer.user.username
+        if username is None:
+            username = pollAnswer.user.first_name
     except:
-        username = pollAnswer.from_user.first_name
+        username = pollAnswer.user.first_name
     if sql:
         chat_id = mem.get_chat_from_poll(pollAnswer.poll_id)
         if chat_id is None:
             return
         user_id = pollAnswer.user.id
-        if mem.check_user_vote(chat_id, user_id):
-            bot.send_message(chat_id, f'User {username} has voted (again).')
+        if len(pollAnswer.option_ids) == 0:
+            mem.remove_vote(chat_id, user_id)
+            bot.send_message(chat_id, f'User {username} has retracted their vote.')
         else:
             mem.add_vote(chat_id, user_id, pollAnswer.option_ids[0])
             bot.send_message(chat_id, f'User {username} has voted.')
@@ -416,7 +430,8 @@ def poll_complete(pollAnswer):
                         f'{reroll_chance:.2f}%')
                 while winner == None:
                     rerolls += 1
-                    reroll_chance, winner = mem.random_poll_winner(chat_id, reroll_chance=reroll_chance)
+                    reroll_chance, winner = mem.random_poll_winner(
+                        chat_id, reroll_chance=reroll_chance)
                     msg = f'{random.choice(reroll_exclamations)}\n{random.choice(exclamations)} '\
                             f'Thats the {ordinal(rerolls)} reroll.'
                     bot.send_message(chat_id, msg)
@@ -468,25 +483,26 @@ def poll_complete(pollAnswer):
 @bot.message_handler(commands=['random'])
 def random_choice(message):
     if sql:
-        choices = mem.get_choices(message.chat.id)
+        chat_id = message.chat.id
+        choices = mem.get_choices(chat_id)
         if choices is None:
-            bot.send_message(message.chat.id, 'No choices have been made.')
+            bot.send_message(chat_id, 'No choices have been made.')
             return
         elif len(choices) == 1:
-            bot.send_message(message.chat.id, \
+            bot.send_message(chat_id, \
                 'You need to have at least two options to choose from.')
             return
-        reroll_chance, winner = mem.random_winner(message.chat.id)
-        bot.send_message(message.chat.id, \
-            f'Choosing random option. Reroll chance: {reroll_chance}%.')
+        reroll_chance, winner = mem.random_winner(chat_id)
+        bot.send_message(chat_id, \
+            f'Choosing random option. Reroll chance: {reroll_chance:.2f}%.')
         rerolls = 0
         while winner == None:
             rerolls += 1
-            reroll_chance, winner = mem.random_winner(message.chat.id, reroll_chance=reroll_chance)
+            reroll_chance, winner = mem.random_winner(chat_id, reroll_chance=reroll_chance)
             msg = f'{random.choice(reroll_exclamations)}\n{random.choice(exclamations)} '\
                         f'Thats the {ordinal(rerolls)} reroll.'
-            bot.send_message(message.chat.id, msg)
-        bot.send_message(chat_id, f'Poll complete! Random winner: {winner}')
+            bot.send_message(chat_id, msg)
+        bot.send_message(chat_id, f'Random winner: {winner}')
         mem.end_poll(chat_id)
     else:
         choices = mem.user_choices[message.chat.id]
@@ -513,4 +529,5 @@ def random_choice(message):
             bot.send_message(message.chat.id, 'You need to have at least two options to choose from.')
 
 if __name__ == "__main__":
-    server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
+    bot.polling(non_stop=True)
+    # server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
