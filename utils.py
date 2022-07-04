@@ -377,8 +377,12 @@ class sql_mem:
                 reroll_slots = random.choice(list(range(1, len(winners) + 1)))
             else:
                 reroll_slots = int(len(winners) * reroll_chance / (1 - reroll_chance))
+            
             choices = winners + [None] * reroll_slots
+            reroll_chance = reroll_slots / len(choices)
+
             winner = random.choice(choices)
+        
         elif len(winners) == 1:
             winner = winners[0]
         else:

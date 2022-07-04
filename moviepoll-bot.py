@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 import telebot
 from telebot import types
-from flask import Flask, request
+# from flask import Flask, request
 import random
 from utils import *
 
@@ -12,32 +12,40 @@ load_dotenv()
 TOKEN = os.getenv('TOKEN')
 OWNER_ID = int(os.getenv('OWNER_ID'))
 DATABASE_URL = os.getenv('DATABASE_URL')
-APP_URL = os.getenv('APP_URL')
+USE_POLLING = os.getenv('USE_POLLING')
+if USE_POLLING is not None:
+    if USE_POLLING.lower() in ['true', '1', 'yes']:
+        USE_POLLING = True
+        print('Using polling')
+if not USE_POLLING:
+    print('Using webhooks')
+
+    APP_URL = os.getenv('APP_URL')
+
+    bot.remove_webhook()
+    bot.set_webhook(url=APP_URL + TOKEN)
+
+    server = Flask(__name__)
+
+    @server.route('/' + TOKEN, methods=['POST'])
+    def webhook():
+        json_string = request.stream.read().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return "!", 200
 
 # try creating database connection, or fallback to local memory
-try:
+if DATABASE_URL is not None:
     mem = sql_mem(DATABASE_URL)
     sql = True
     print('Using PostgreSQL database')
-except Exception as e:
+else:
     sql = False
     mem = local_mem()
-    print(f'Using local dict database due to error: {e}')
+    print('Using local disk database')
 
 # create bot
 bot = telebot.TeleBot(TOKEN)
-
-server = Flask(__name__)
-
-bot.remove_webhook()
-bot.set_webhook(url=APP_URL + TOKEN)
-
-@server.route('/' + TOKEN, methods=['POST'])
-def webhook():
-    json_string = request.stream.read().decode('utf-8')
-    update = telebot.types.Update.de_json(json_string)
-    bot.process_new_updates([update])
-    return "!", 200
 
 @bot.message_handler(commands=['start', 'help'])
 def start(message):
@@ -531,4 +539,8 @@ def random_choice(message):
             bot.send_message(message.chat.id, 'You need to have at least two options to choose from.')
 
 if __name__ == "__main__":
-    server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
+    if USE_POLLING:
+        bot.remove_webhook()
+        bot.polling(non_stop=True)
+    else:
+        server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
