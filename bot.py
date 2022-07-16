@@ -16,11 +16,13 @@ if USE_POLLING is not None:
     if USE_POLLING.lower() in ['true', '1', 'yes']:
         USE_POLLING = True
         print('Using polling')
+    else:
+        USE_POLLING = False
+        print('Using webhook')
 
 bot = telebot.TeleBot(TOKEN)
 
 if not USE_POLLING:
-    print('Using webhooks')
 
     APP_URL = os.getenv('APP_URL')
 
