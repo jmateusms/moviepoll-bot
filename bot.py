@@ -1,5 +1,6 @@
 # import packages
 import os
+import time
 from dotenv import load_dotenv
 import telebot
 from telebot import types
@@ -27,6 +28,7 @@ if not USE_POLLING:
     APP_URL = os.getenv('APP_URL')
 
     bot.remove_webhook()
+    time.sleep(1)
     bot.set_webhook(url=APP_URL+TOKEN)
 
     server = Flask(__name__)
