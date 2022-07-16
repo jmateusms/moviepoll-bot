@@ -1,1 +1,1 @@
-web: gunicorn --bind 0.0.0.0:${PORT} main:server
+web: gunicorn --bind 0.0.0.0:${PORT} moviepoll-bot:server
