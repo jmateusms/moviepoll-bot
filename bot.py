@@ -27,14 +27,14 @@ if not USE_POLLING:
 
     APP_URL = os.getenv('APP_URL')
 
+    server = Flask(__name__)
+
     @server.route("/")
     def webhook():
         # bot.remove_webhook()
         # time.sleep(1)
         bot.set_webhook(url=APP_URL+TOKEN)
         return "!", 200
-
-    server = Flask(__name__)
 
     @server.route('/' + TOKEN, methods=['POST'])
     def webhook():
