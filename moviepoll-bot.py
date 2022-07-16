@@ -22,8 +22,10 @@ bot = telebot.TeleBot(TOKEN)
 if not USE_POLLING:
     print('Using webhooks')
 
+    APP_URL = os.getenv('APP_URL')
+
     bot.remove_webhook()
-    bot.set_webhook(url='https://moviepoll-bot.herokuapp.com/'+TOKEN)
+    bot.set_webhook(url=APP_URL+TOKEN)
 
     server = Flask(__name__)
 
@@ -543,4 +545,5 @@ if __name__ == "__main__":
             except Exception as e:
                 print(e)
     else:
-        server.run(host="0.0.0.0", port=os.environ.get('PORT', '5000'))
+        PORT = int(os.environ.get('PORT', 5000))
+        server.run(host="0.0.0.0", port=PORT)
