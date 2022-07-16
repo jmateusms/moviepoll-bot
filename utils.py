@@ -337,7 +337,7 @@ class sql_mem:
         users_choices = self.cursor.fetchall()
         # check if all users in user_choices are present in users_voted
         for user in users_choices:
-            if user not in users_voted and user[0] != 0:
+            if user not in users_voted and user[0] != '0':
                 return False
         return True
     

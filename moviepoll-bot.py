@@ -493,7 +493,7 @@ def random_choice(message):
     if sql:
         chat_id = message.chat.id
         choices = mem.get_choices(chat_id)
-        if choices is None:
+        if choices is None or len(choices) == 0:
             bot.send_message(chat_id, 'No choices have been made.')
             return
         elif len(choices) == 1:
@@ -510,7 +510,7 @@ def random_choice(message):
             msg = f'{random.choice(reroll_exclamations)}\n{random.choice(exclamations)} '\
                         f'Thats the {ordinal(rerolls)} reroll.'
             bot.send_message(chat_id, msg)
-        bot.send_message(chat_id, f'Random winner: {winner}')
+        bot.send_message(chat_id, f'Random winner: {winner[0]}')
         mem.end_poll(chat_id)
     else:
         choices = mem.user_choices[message.chat.id]
