@@ -24,8 +24,8 @@ if not USE_POLLING:
 
     APP_URL = os.getenv('APP_URL')
 
-    bot.remove_webhook()
-    bot.set_webhook(url=APP_URL + TOKEN)
+    # bot.remove_webhook()
+    # bot.set_webhook(url=APP_URL + TOKEN)
 
     server = Flask(__name__)
 
@@ -34,6 +34,12 @@ if not USE_POLLING:
         json_string = request.stream.read().decode('utf-8')
         update = telebot.types.Update.de_json(json_string)
         bot.process_new_updates([update])
+        return "!", 200
+    
+    @server.route("/")
+    def webhook():
+        bot.remove_webhook()
+        bot.set_webhook(url=APP_URL + TOKEN)
         return "!", 200
 
 if DATABASE_URL is not None:
