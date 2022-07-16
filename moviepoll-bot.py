@@ -8,6 +8,7 @@ import random
 from utils import *
 
 load_dotenv()
+PORT = int(os.getenv('PORT'))
 TOKEN = os.getenv('TOKEN')
 OWNER_ID = int(os.getenv('OWNER_ID'))
 DATABASE_URL = os.getenv('DATABASE_URL')
@@ -551,4 +552,4 @@ if __name__ == "__main__":
             except Exception as e:
                 print(e)
     else:
-        server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
+        server.run(host="0.0.0.0", port=PORT)
