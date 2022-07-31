@@ -150,7 +150,7 @@ class sql_mem:
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS results "\
             "(unique_tt TEXT PRIMARY KEY, chat_id TEXT, tt TEXT, url TEXT, title TEXT, "\
-                "polls_count INT, votes_count INT, last_poll DATE, last_win DATE);")
+                "polls_count INT, votes_count INT, wins_count INT, last_poll DATE, last_win DATE);")
         self.connection.commit()
     
     def add_choice(self, unique_id, user_id, chat_id, username, tt, url, title):
@@ -236,6 +236,7 @@ class sql_mem:
         '''
         unique_titles = [get_unique_id(str(chat_id), i) for i in range(len(titles))]
         unique_tts = [get_unique_id(str(chat_id), tt) for tt in tts]
+        urls = [imdb_url(tt) for tt in tts]
         
         self.cursor.execute("SELECT * FROM polls WHERE chat_id = %s", (str(chat_id),))
         if self.cursor.rowcount > 0:
@@ -268,14 +269,14 @@ class sql_mem:
                     if self.cursor.rowcount > 0:
                         self.cursor.execute(
                             """UPDATE results
-                            SET polls_count = polls_count + 1, last_poll = CAST(GETDATE() AS DATE)
+                            SET polls_count = polls_count + 1, last_poll = CAST(CURRENT_TIMESTAMP AS DATE)
                             WHERE unique_tt = %s;""", (unique_tts[i],))
                     else:
                         self.cursor.execute(
                             """INSERT INTO results
-                            (unique_tt, chat_id, tt, url, title, polls_count, votes_count, last_poll, last_win)
-                            VALUES (%s, %s, %s, %s, %s, 1, 0, CAST(GETDATE() AS DATE), NULL);""",
-                            (unique_tts[i], str(chat_id), tts[i], titles[i], titles[i]))
+                            (unique_tt, chat_id, tt, url, title, polls_count, votes_count, wins_count, last_poll, last_win)
+                            VALUES (%s, %s, %s, %s, %s, 1, 0, 0, CAST(CURRENT_TIMESTAMP AS DATE), NULL);""",
+                            (unique_tts[i], str(chat_id), tts[i], urls[i], titles[i]))
         
         self.connection.commit()
     
@@ -318,7 +319,10 @@ class sql_mem:
             enable_results = self.cursor.fetchone()[0]
             if enable_results:
                 self.cursor.execute(
-                    "SELECT tt FROM poll_counts WHERE unique_title = %s;", (unique_title,))
+                    "SELECT title FROM poll_counts WHERE unique_title = %s;", (unique_title,))
+                title = self.cursor.fetchone()[0]
+                self.cursor.execute(
+                    "SELECT tt FROM user_choices WHERE title = %s AND chat_id = %s;", (title, str(chat_id)))
                 tt = self.cursor.fetchone()[0]
                 unique_tt = get_unique_id(str(chat_id), tt)
                 self.cursor.execute(
@@ -474,9 +478,9 @@ class sql_mem:
         
         return reroll_chance, winner
     
-    def results_last_win(self, chat_id, title):
+    def results_win(self, chat_id, title):
         '''
-        Set last_win for a movie.
+        Register win for a movie.
         '''
         self.cursor.execute(
             "SELECT tt FROM user_choices WHERE chat_id = %s AND title = %s;", (str(chat_id), title))
@@ -484,7 +488,10 @@ class sql_mem:
         unique_tt = get_unique_id(str(chat_id), tt)
 
         self.cursor.execute(
-            "UPDATE results SET last_win = CAST(GETDATE() AS DATE) WHERE unique_tt = %s;", (unique_tt,))
+            """UPDATE results
+            SET last_win = CAST(CURRENT_TIMESTAMP AS DATE), wins_count = wins_count + 1
+            WHERE unique_tt = %s;"""
+            , (unique_tt,))
         self.connection.commit()
     
     def enable_results(self, chat_id):
@@ -568,11 +575,19 @@ class sql_mem:
 
         self.initialize_database()
     
+    def reset_prefs(self):
+        '''
+        Reset enable_results table.
+        '''
+        self.cursor.execute("DROP TABLE enable_results;")
+        self.connection.commit()
+
+        self.initialize_database()
+
     def reset_results(self):
         '''
         Reset results database.
         '''
-        self.cursor.execute("DROP TABLE enable_results;")
         self.cursor.execute("DROP TABLE results;")
         self.connection.commit()
 

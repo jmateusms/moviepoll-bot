@@ -350,7 +350,7 @@ def veto_choice(message):
             markup = types.ReplyKeyboardRemove(selective=False)
             bot.send_message(chat_id, 'No choices found.', reply_markup=markup)
 
-@bot.message_handler(commands=['deleteentiredatabase'])
+@bot.message_handler(commands=['deletemaindatabase'])
 def clear_memory(message):
     if message.from_user.id in [OWNER_ID]:
         if sql:
@@ -370,6 +370,17 @@ def clear_results(message):
             bot.send_message(message.chat.id, 'Results database reinitialized.')
         else:
             bot.send_message(message.chat.id, 'Results database reinitialized.')
+    else:
+        bot.send_message(message.chat.id, 'You do not possess that kind of power.')
+
+@bot.message_handler(commands=['deleteprefsdatabase'])
+def clear_prefs(message):
+    if message.from_user.id in [OWNER_ID]:
+        if sql:
+            mem.reset_prefs()
+            bot.send_message(message.chat.id, 'Preferences database reinitialized.')
+        else:
+            bot.send_message(message.chat.id, 'Preferences database reinitialized.')
     else:
         bot.send_message(message.chat.id, 'You do not possess that kind of power.')
 
@@ -459,7 +470,7 @@ def poll_complete(pollAnswer):
         if mem.check_poll_complete(chat_id):
             winner = mem.get_poll_winner(chat_id)
             if winner is not None:
-                mem.results_last_win(chat_id, winner)
+                mem.results_win(chat_id, winner)
                 bot.send_message(chat_id, f'Poll complete! Winner: {winner}')
             else:
                 rerolls = 0
@@ -474,7 +485,7 @@ def poll_complete(pollAnswer):
                     msg = f'{random.choice(reroll_exclamations)}\n{random.choice(exclamations)} '\
                             f'Thats the {ordinal(rerolls)} reroll.'
                     bot.send_message(chat_id, msg)
-                mem.results_last_win(chat_id, winner)
+                mem.results_win(chat_id, winner)
                 bot.send_message(chat_id, f'Poll complete! Random winner after poll tie: {winner}')
             mem.end_poll(chat_id)
     else:
@@ -542,7 +553,7 @@ def random_choice(message):
             msg = f'{random.choice(reroll_exclamations)}\n{random.choice(exclamations)} '\
                         f'Thats the {ordinal(rerolls)} reroll.'
             bot.send_message(chat_id, msg)
-        mem.results_last_win(chat_id, winner)
+        mem.results_win(chat_id, winner)
         bot.send_message(chat_id, f'Random winner: {winner}')
         mem.end_poll(chat_id)
     else:
@@ -619,14 +630,17 @@ def results(message):
         df['title'] = [row[4] for row in results]
         df['polls_count'] = [row[5] for row in results]
         df['votes_count'] = [row[6] for row in results]
-        df['last_poll'] = [row[7] for row in results]
-        df['last_win'] = [row[8] for row in results]
+        df['wins_count'] = [row[7] for row in results]
+        df['last_poll'] = [row[8] for row in results]
+        df['last_win'] = [row[9] for row in results]
 
         # send data frame as csv in chat
-        csv_io = io.StringIO()
-        df.to_csv(csv_io, index=False)
-        csv_io.seek(0)
-        bot.send_document(chat_id, csv_io, filename='results.csv')
+        my_bytes = pickle.dumps(df, protocol=4)
+        file_obj = io.BytesIO()
+        df.to_excel(file_obj, index=False)
+        file_obj.name = "results.xlsx"
+        file_obj.seek(0)
+        bot.send_document(chat_id, file_obj)
         bot.send_message(chat_id, 'Results history uploaded.')
     else:
         bot.send_message(chat_id, 'Results history is not supported at this time.')
