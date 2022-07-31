@@ -1,5 +1,6 @@
 # import packages
 import os
+import io
 import time
 from dotenv import load_dotenv
 import telebot
@@ -606,7 +607,26 @@ def clear_results(message):
 def results(message):
     chat_id = message.chat.id
     if sql:
-        ...
+        results = mem.get_results(chat_id)
+        if len(results) == 0:
+            bot.send_message(chat_id, 'No results saved in history for this chat.')
+            return
+        
+        df = pd.DataFrame()
+        df['tt'] = [row[2] for row in results]
+        df['url'] = [row[3] for row in results]
+        df['title'] = [row[4] for row in results]
+        df['polls_count'] = [row[5] for row in results]
+        df['votes_count'] = [row[6] for row in results]
+        df['last_poll'] = [row[7] for row in results]
+        df['last_win'] = [row[8] for row in results]
+
+        # send data frame as csv in chat
+        csv_io = io.StringIO()
+        df.to_csv(csv_io, index=False)
+        csv_io.seek(0)
+        bot.send_document(chat_id, csv_io, filename='results.csv')
+        bot.send_message(chat_id, 'Results history uploaded.')
     else:
         bot.send_message(chat_id, 'Results history is not supported at this time.')
 
