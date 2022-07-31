@@ -24,7 +24,6 @@ if USE_POLLING is not None:
         print('Using webhook')
 
 bot = telebot.TeleBot(TOKEN)
-bot.remove_webhook()
 
 if not USE_POLLING:
 
@@ -648,6 +647,7 @@ def results(message):
 
 if __name__ == "__main__":
     if USE_POLLING:
+        bot.remove_webhook()
         while True:
             try:
                 bot.polling(non_stop=True)
