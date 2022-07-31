@@ -61,5 +61,4 @@ The `/choices` command shows what each user has suggested. The `/poll` command  
 ## To do
 
 - Convert dummy debug commands to use PostgreSQL database.
-- Add inline functionality to search for movies in IMDb.
-- Save movie winners to history (if user enables this).
+- Add inline functionality to search for movies on IMDb.

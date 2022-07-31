@@ -149,8 +149,8 @@ class sql_mem:
             "(chat_id TEXT PRIMARY KEY, enable_results BOOLEAN);")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS results "\
-            "(unique_tt TEXT PRIMARY KEY, chat_id TEXT, "\
-                "tt TEXT, url TEXT, title TEXT, type TEXT, date DATE);")
+            "(unique_tt TEXT PRIMARY KEY, chat_id TEXT, tt TEXT, url TEXT, title TEXT, "\
+                "polls_count INT, votes_count INT, wins_count INT, last_poll DATE, last_win DATE);")
         self.connection.commit()
     
     def add_choice(self, unique_id, user_id, chat_id, username, tt, url, title):
@@ -230,11 +230,13 @@ class sql_mem:
         except:
             return None
     
-    def add_poll(self, chat_id, poll_id, titles):
+    def add_poll(self, chat_id, poll_id, titles, tts):
         '''
         Add poll to memory.
         '''
         unique_titles = [get_unique_id(str(chat_id), i) for i in range(len(titles))]
+        unique_tts = [get_unique_id(str(chat_id), tt) for tt in tts]
+        urls = [imdb_url(tt) for tt in tts]
         
         self.cursor.execute("SELECT * FROM polls WHERE chat_id = %s", (str(chat_id),))
         if self.cursor.rowcount > 0:
@@ -256,6 +258,25 @@ class sql_mem:
                 (unique_title, chat_id, poll_id, option_id, title, count)
                 VALUES (%s, %s, %s, %s, %s, %s);""",
                 (unique_titles[i], str(chat_id), poll_id, i, titles[i], 0))
+        
+            self.cursor.execute(
+                "SELECT enable_results FROM enable_results WHERE chat_id = %s;", (str(chat_id),))
+            if self.cursor.rowcount > 0:
+                enable_results = self.cursor.fetchone()[0]
+                if enable_results:
+                    self.cursor.execute(
+                        "SELECT * FROM results WHERE unique_tt = %s;", (unique_tts[i],))
+                    if self.cursor.rowcount > 0:
+                        self.cursor.execute(
+                            """UPDATE results
+                            SET polls_count = polls_count + 1, last_poll = CAST(CURRENT_TIMESTAMP AS DATE)
+                            WHERE unique_tt = %s;""", (unique_tts[i],))
+                    else:
+                        self.cursor.execute(
+                            """INSERT INTO results
+                            (unique_tt, chat_id, tt, url, title, polls_count, votes_count, wins_count, last_poll, last_win)
+                            VALUES (%s, %s, %s, %s, %s, 1, 0, 0, CAST(CURRENT_TIMESTAMP AS DATE), NULL);""",
+                            (unique_tts[i], str(chat_id), tts[i], urls[i], titles[i]))
         
         self.connection.commit()
     
@@ -292,6 +313,21 @@ class sql_mem:
         self.cursor.execute(
             "UPDATE poll_counts SET count = count + 1 WHERE unique_title = %s;", (unique_title,))
         
+        self.cursor.execute(
+            "SELECT enable_results FROM enable_results WHERE chat_id = %s;", (str(chat_id),))
+        if self.cursor.rowcount > 0:
+            enable_results = self.cursor.fetchone()[0]
+            if enable_results:
+                self.cursor.execute(
+                    "SELECT title FROM poll_counts WHERE unique_title = %s;", (unique_title,))
+                title = self.cursor.fetchone()[0]
+                self.cursor.execute(
+                    "SELECT tt FROM user_choices WHERE title = %s AND chat_id = %s;", (title, str(chat_id)))
+                tt = self.cursor.fetchone()[0]
+                unique_tt = get_unique_id(str(chat_id), tt)
+                self.cursor.execute(
+                    "UPDATE results SET votes_count = votes_count + 1 WHERE unique_tt = %s;", (unique_tt,))
+        
         self.connection.commit()
     
     def remove_vote(self, chat_id, user_id):
@@ -310,8 +346,22 @@ class sql_mem:
             self.cursor.execute(
                 "UPDATE poll_counts SET count = count - 1 WHERE unique_title = %s;",
                 (unique_title,))
+
+            self.cursor.execute(
+                "SELECT enable_results FROM enable_results WHERE chat_id = %s;", (str(chat_id),))
+            if self.cursor.rowcount > 0:
+                enable_results = self.cursor.fetchone()[0]
+                if enable_results:
+                    self.cursor.execute(
+                        "SELECT tt FROM poll_counts WHERE unique_title = %s;", (unique_title,))
+                    tt = self.cursor.fetchone()[0]
+                    unique_tt = get_unique_id(str(chat_id), tt)
+                    self.cursor.execute(
+                        "UPDATE results SET votes_count = votes_count - 1 WHERE unique_tt = %s;",
+                        (unique_tt,))
+            
             self.connection.commit()
-        
+    
     def check_user_vote(self, chat_id, user_id):
         '''
         Check if user has voted.
@@ -424,9 +474,94 @@ class sql_mem:
         choices = choices + [None] * reroll_slots
         reroll_chance = 100 * reroll_slots / len(choices)
 
-        winner = random.choice(choices)
+        winner = random.choice(choices)[0]
         
         return reroll_chance, winner
+    
+    def results_win(self, chat_id, title):
+        '''
+        Register win for a movie.
+        '''
+        self.cursor.execute(
+            "SELECT tt FROM user_choices WHERE chat_id = %s AND title = %s;", (str(chat_id), title))
+        tt = self.cursor.fetchone()[0]
+        unique_tt = get_unique_id(str(chat_id), tt)
+
+        self.cursor.execute(
+            """UPDATE results
+            SET last_win = CAST(CURRENT_TIMESTAMP AS DATE), wins_count = wins_count + 1
+            WHERE unique_tt = %s;"""
+            , (unique_tt,))
+        self.connection.commit()
+    
+    def enable_results(self, chat_id):
+        '''
+        Enable results for a chat. Returns True if successful.
+        If results is already enabled, returns False.
+        '''
+        self.cursor.execute(
+            "SELECT enable_results FROM enable_results WHERE chat_id = %s;", (str(chat_id),))
+        if self.cursor.rowcount > 0:
+            if self.cursor.fetchone()[0] == True:
+                return False
+            else:
+                self.cursor.execute(
+                    "UPDATE enable_results SET enable_results = %s WHERE chat_id = %s;", (True, str(chat_id)))
+                self.connection.commit()
+                return True
+        else:
+            self.cursor.execute(
+                "INSERT INTO enable_results (chat_id, enable_results) VALUES (%s, %s);", (str(chat_id), True))
+            self.connection.commit()
+            return True
+    
+    def disable_results(self, chat_id):
+        '''
+        Disable results for a chat. Returns True if successful.
+        If results is already disabled, returns False.
+        '''
+        self.cursor.execute(
+            "SELECT enable_results FROM enable_results WHERE chat_id = %s;", (str(chat_id),))
+        if self.cursor.rowcount > 0:
+            if self.cursor.fetchone()[0] == False:
+                return False
+            else:
+                self.cursor.execute(
+                    "UPDATE enable_results SET enable_results = %s WHERE chat_id = %s;", (False, str(chat_id)))
+                self.connection.commit()
+                return True
+        else:
+            self.cursor.execute(
+                "INSERT INTO enable_results (chat_id, enable_results) VALUES (%s, %s);", (str(chat_id), False))
+            self.connection.commit()
+            return True
+    
+    def results_enabled(self, chat_id):
+        '''
+        Check if results are enabled for a chat.
+        '''
+        self.cursor.execute(
+            "SELECT enable_results FROM enable_results WHERE chat_id = %s;", (str(chat_id),))
+        if self.cursor.rowcount > 0:
+            return self.cursor.fetchone()[0]
+        else:
+            return False
+    
+    def get_results(self, chat_id):
+        '''
+        Get results for a chat.
+        '''
+        self.cursor.execute(
+            "SELECT * FROM results WHERE chat_id = %s;", (str(chat_id),))
+        return self.cursor.fetchall()
+    
+    def clear_results(self, chat_id):
+        '''
+        Remove all results from given chat.
+        '''
+        self.cursor.execute(
+            "DELETE FROM results WHERE chat_id = %s;", (str(chat_id),))
+        self.connection.commit()
 
     def reset_database(self):
         '''
@@ -436,7 +571,23 @@ class sql_mem:
         self.cursor.execute("DROP TABLE users_voted;")
         self.cursor.execute("DROP TABLE polls;")
         self.cursor.execute("DROP TABLE poll_counts;")
+        self.connection.commit()
+
+        self.initialize_database()
+    
+    def reset_prefs(self):
+        '''
+        Reset enable_results table.
+        '''
         self.cursor.execute("DROP TABLE enable_results;")
+        self.connection.commit()
+
+        self.initialize_database()
+
+    def reset_results(self):
+        '''
+        Reset results database.
+        '''
         self.cursor.execute("DROP TABLE results;")
         self.connection.commit()
 
