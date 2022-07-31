@@ -33,7 +33,7 @@ if not USE_POLLING:
 
     @server.route("/")
     def webhook():
-        # bot.remove_webhook()
+        bot.remove_webhook()
         # time.sleep(1)
         bot.set_webhook(url=APP_URL+TOKEN)
         return "!", 200
