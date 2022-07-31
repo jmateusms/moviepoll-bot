@@ -268,13 +268,13 @@ class sql_mem:
                     if self.cursor.rowcount > 0:
                         self.cursor.execute(
                             """UPDATE results
-                            SET polls_count = polls_count + 1, last_poll = GETDATE()
+                            SET polls_count = polls_count + 1, last_poll = CAST(GETDATE() AS DATE)
                             WHERE unique_tt = %s;""", (unique_tts[i],))
                     else:
                         self.cursor.execute(
                             """INSERT INTO results
                             (unique_tt, chat_id, tt, url, title, polls_count, votes_count, last_poll, last_win)
-                            VALUES (%s, %s, %s, %s, %s, 1, 0, GETDATE(), NULL);""",
+                            VALUES (%s, %s, %s, %s, %s, 1, 0, CAST(GETDATE() AS DATE), NULL);""",
                             (unique_tts[i], str(chat_id), tts[i], titles[i], titles[i]))
         
         self.connection.commit()
@@ -484,7 +484,7 @@ class sql_mem:
         unique_tt = get_unique_id(str(chat_id), tt)
 
         self.cursor.execute(
-            "UPDATE results SET last_win = GETDATE() WHERE unique_tt = %s;", (unique_tt,))
+            "UPDATE results SET last_win = CAST(GETDATE() AS DATE) WHERE unique_tt = %s;", (unique_tt,))
         self.connection.commit()
     
     def enable_results(self, chat_id):
