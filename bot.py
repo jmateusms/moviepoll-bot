@@ -470,7 +470,6 @@ def poll_complete(pollAnswer):
         if mem.check_poll_complete(chat_id):
             winner = mem.get_poll_winner(chat_id)
             if winner is not None:
-                mem.results_win(chat_id, winner)
                 bot.send_message(chat_id, f'Poll complete! Winner: {winner}')
             else:
                 rerolls = 0
@@ -485,8 +484,8 @@ def poll_complete(pollAnswer):
                     msg = f'{random.choice(reroll_exclamations)}\n{random.choice(exclamations)} '\
                             f'Thats the {ordinal(rerolls)} reroll.'
                     bot.send_message(chat_id, msg)
-                mem.results_win(chat_id, winner)
                 bot.send_message(chat_id, f'Poll complete! Random winner after poll tie: {winner}')
+            mem.results_win(chat_id, winner)
             bot.stop_poll(chat_id, pollAnswer.poll_id)
             mem.end_poll(chat_id)
     else:
