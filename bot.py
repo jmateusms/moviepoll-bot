@@ -405,7 +405,7 @@ def poll(message):
                         chat_id, f'{row[6]}: {row[5]}', disable_notification=True)
             poll = bot.send_poll(chat_id, random.choice(vote_lines),
                 titles, is_anonymous=False)
-            mem.add_poll(chat_id, poll.poll.id, titles, tts)
+            mem.add_poll(chat_id, poll.poll.id, poll.message_id, titles, tts)
             bot.send_message(chat_id, 'Poll created.')
     else:
         if len(mem.user_choices[chat_id]) > 1:
@@ -436,7 +436,7 @@ def fakepoll(message):
             tts = ['tt0068646', 'tt0109830', 'tt0111161']
             poll = bot.send_poll(message.chat.id, random.choice(vote_lines),
                 titles, is_anonymous=False)
-            mem.add_poll(message.chat.id, poll.poll.id, titles, tts)
+            mem.add_poll(message.chat.id, poll.poll.id, poll.message_id, titles, tts)
         else:
             mem.last_poll[message.chat.id] = bot.send_poll(
                 message.chat.id, 'Choose', ['The Godfather', 'Forrest Gump'], is_anonymous=False)
@@ -486,7 +486,8 @@ def poll_complete(pollAnswer):
                     bot.send_message(chat_id, msg)
                 bot.send_message(chat_id, f'Poll complete! Random winner after poll tie: {winner}')
             mem.results_win(chat_id, winner)
-            bot.stop_poll(chat_id, pollAnswer.poll_id)
+            poll_msg_id = mem.get_msg_from_poll(pollAnswer.poll_id)
+            bot.stop_poll(chat_id, poll_msg_id)
             mem.end_poll(chat_id)
     else:
         if not pollAnswer.poll_id in mem.poll_chats:

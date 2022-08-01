@@ -139,7 +139,7 @@ class sql_mem:
             "(unique_user_chat TEXT PRIMARY KEY, user_id TEXT, chat_id TEXT, option_id INT);")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS polls "\
-            "(chat_id TEXT PRIMARY KEY, poll_id TEXT, poll_active BOOLEAN);")
+            "(chat_id TEXT PRIMARY KEY, poll_id TEXT, msg_id TEXT, poll_active BOOLEAN);")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS poll_counts "\
             "(unique_title TEXT PRIMARY KEY, chat_id TEXT, poll_id TEXT, "\
@@ -230,7 +230,7 @@ class sql_mem:
         except:
             return None
     
-    def add_poll(self, chat_id, poll_id, titles, tts):
+    def add_poll(self, chat_id, poll_id, msg_id, titles, tts):
         '''
         Add poll to memory.
         '''
@@ -242,13 +242,13 @@ class sql_mem:
         if self.cursor.rowcount > 0:
             self.cursor.execute(
                 """UPDATE polls
-                SET poll_id = %s, poll_active = %s
-                WHERE chat_id = %s;""", (poll_id, True, str(chat_id)))
+                SET poll_id = %s, msg_id = %s, poll_active = %s
+                WHERE chat_id = %s;""", (poll_id, msg_id, True, str(chat_id)))
         else:
             self.cursor.execute(
                 """INSERT INTO polls
-                (chat_id, poll_id, poll_active)
-                VALUES (%s, %s, %s);""", (str(chat_id), poll_id, True))
+                (chat_id, poll_id, msg_id, poll_active)
+                VALUES (%s, %s, %s);""", (str(chat_id), poll_id, msg_id, True))
         
         self.cursor.execute(
             "DELETE FROM poll_counts WHERE chat_id = %s;", (str(chat_id),))
@@ -286,6 +286,17 @@ class sql_mem:
         '''
         self.cursor.execute(
             "SELECT chat_id FROM polls WHERE poll_id = %s AND poll_active = %s;", (poll_id, True))
+        try:
+            return self.cursor.fetchone()[0]
+        except:
+            return None
+    
+    def get_msg_from_poll(self, poll_id):
+        '''
+        Check if poll exists. Returns msg_id if exists, None otherwise.
+        '''
+        self.cursor.execute(
+            "SELECT msg_id FROM polls WHERE poll_id = %s AND poll_active = %s;", (poll_id, True))
         try:
             return self.cursor.fetchone()[0]
         except:
