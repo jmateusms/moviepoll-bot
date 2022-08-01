@@ -248,7 +248,7 @@ class sql_mem:
             self.cursor.execute(
                 """INSERT INTO polls
                 (chat_id, poll_id, msg_id, poll_active)
-                VALUES (%s, %s, %s);""", (str(chat_id), poll_id, msg_id, True))
+                VALUES (%s, %s, %s, %s);""", (str(chat_id), poll_id, msg_id, True))
         
         self.cursor.execute(
             "DELETE FROM poll_counts WHERE chat_id = %s;", (str(chat_id),))
