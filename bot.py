@@ -487,6 +487,7 @@ def poll_complete(pollAnswer):
                     bot.send_message(chat_id, msg)
                 mem.results_win(chat_id, winner)
                 bot.send_message(chat_id, f'Poll complete! Random winner after poll tie: {winner}')
+            bot.stop_poll(chat_id, pollAnswer.poll_id)
             mem.end_poll(chat_id)
     else:
         if not pollAnswer.poll_id in mem.poll_chats:

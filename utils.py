@@ -353,7 +353,7 @@ class sql_mem:
                 enable_results = self.cursor.fetchone()[0]
                 if enable_results:
                     self.cursor.execute(
-                        "SELECT tt FROM poll_counts WHERE unique_title = %s;", (unique_title,))
+                        "SELECT tt FROM user_choices WHERE unique_title = %s;", (unique_title,))
                     tt = self.cursor.fetchone()[0]
                     unique_tt = get_unique_id(str(chat_id), tt)
                     self.cursor.execute(
