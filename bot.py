@@ -83,11 +83,9 @@ def search(query):
     '''
     Search for movies using OMDb API
     '''
-    print(query.query)
     if len(query.query) < 3:
         return
     search = omdb_client.search(query.query)
-    print(search[0])
     answers = []
 
     for i in range(min(5, len(search))):
