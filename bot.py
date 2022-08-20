@@ -95,7 +95,7 @@ def search(query):
             input_message_content=types.InputTextMessageContent(
                 message_text='/choose ' + imdb_url(search[i]['imdb_id']))))
 
-    bot.answer_inline_query(query.id, answers, cache_time=0)
+    bot.answer_inline_query(query.id, answers, cache_time=300)
 
 @bot.message_handler(commands=['choose'])
 def choose(message, ignore_size=False):
