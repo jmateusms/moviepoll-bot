@@ -19,6 +19,7 @@ In order to run the bot, you need to define the variables `TOKEN` and `OWNER_ID`
 - You can also set a `DATABASE_URL` to use a PostgreSQL database as bot memory. If this is not provided, the bot will sync to local files in disk.
 - If you host your instance at a service like Heroku, you can set `APP_URL` to user webhooks. This will allow the app to be put to sleep after no interactions are made with the bot.
 - If you want to use the bot in polling mode, set `USE_POLLING` to `yes`.
+- For inline search functionality, you need to set `OMDB_KEY` to a [valid OMDB API key](https://www.omdbapi.com/apikey.aspx).
 
 ### Dependencies
 
@@ -58,7 +59,6 @@ The `/choices` command shows what each user has suggested. The `/poll` command  
 /veto - veto one of the current choices
 ```
 
-## To do
+### Inline search
 
-- Convert dummy debug commands to use PostgreSQL database.
-- Add inline functionality to search for movies on IMDb.
+If an OMDB API key is set, users can search for movies by title in the chat. The bot will show the first five results of the search.

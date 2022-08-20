@@ -8,6 +8,7 @@ import telebot
 from telebot import types
 from flask import Flask, request
 import random
+from omdb import OMDBClient
 from utils import *
 
 load_dotenv()
@@ -15,6 +16,10 @@ TOKEN = os.getenv('TOKEN')
 OWNER_ID = int(os.getenv('OWNER_ID'))
 DATABASE_URL = os.getenv('DATABASE_URL')
 USE_POLLING = os.getenv('USE_POLLING')
+OMDB_KEY = os.getenv('OMDB_KEY')
+
+omdb_client = OMDBClient(apikey=OMDB_KEY)
+
 if USE_POLLING is not None:
     if USE_POLLING.lower() in ['true', '1', 'yes']:
         USE_POLLING = True
@@ -72,6 +77,27 @@ These are the available commands:
 /clearall - delete all choices
 /veto - veto one of the current choices
 ''')
+
+@bot.inline_handler(lambda query: type(query.query) == str)
+def search(query):
+    '''
+    Search for movies using OMDb API
+    '''
+    print(query.query)
+    if len(query.query) < 3:
+        return
+    search = omdb_client.search(query.query)
+    print(search[0])
+    answers = []
+
+    for i in range(min(5, len(search))):
+        answers.append(types.InlineQueryResultArticle(
+            id=str(i),
+            title=search[i]['title'],
+            input_message_content=types.InputTextMessageContent(
+                message_text='/choose ' + imdb_url(search[i]['imdb_id']))))
+
+    bot.answer_inline_query(query.id, answers, cache_time=0)
 
 @bot.message_handler(commands=['choose'])
 def choose(message, ignore_size=False):
