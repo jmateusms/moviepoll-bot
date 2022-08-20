@@ -88,7 +88,7 @@ def search(query):
     search = omdb_client.search(query.query)
     answers = []
 
-    for i in range(min(5, len(search))):
+    for i in range(min(10, len(search))):
         answers.append(types.InlineQueryResultArticle(
             id=str(i),
             title=search[i]['title'],

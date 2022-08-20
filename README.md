@@ -61,4 +61,4 @@ The `/choices` command shows what each user has suggested. The `/poll` command  
 
 ### Inline search
 
-If an OMDB API key is set, users can search for movies by title in the chat. The bot will show the first five results of the search.
+If an OMDB API key is set, users can search for movies by title in the chat. The bot will show the first 10 results of the search.
