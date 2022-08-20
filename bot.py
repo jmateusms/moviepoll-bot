@@ -91,7 +91,7 @@ def search(query):
     for i in range(min(10, len(search))):
         answers.append(types.InlineQueryResultArticle(
             id=str(i),
-            title=search[i]['title'],
+            title=f'{search[i]["title"]} ({search[i]["year"]})',
             input_message_content=types.InputTextMessageContent(
                 message_text='/choose ' + imdb_url(search[i]['imdb_id']))))
 
