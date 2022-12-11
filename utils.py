@@ -54,7 +54,7 @@ def getHTML(url):
     '''
     Get HTML from url
     '''
-    response = requests.get(url, headers = {"Accept-Language": "en-US"})
+    response = requests.get(url, headers = {"Accept-Language": "en-US", 'User-Agent': 'Mozilla/5.0'})
     return response.text
 
 def get_soup(html):
